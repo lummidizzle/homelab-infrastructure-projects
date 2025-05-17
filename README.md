@@ -1,10 +1,10 @@
-## 🪟 Windows AD & DNS Setup
+## 🧠 Windows AD & DNS Setup
 
 This documentation captures key steps and configuration views for setting up Windows Server as an Active Directory Domain Controller and DNS server.
 
 ---
 
-### 🔐 First Boot Screen
+### 🖥️ First Boot Screen
 
 This screenshot shows the first boot of the Windows Server VM.
 
@@ -12,7 +12,7 @@ This screenshot shows the first boot of the Windows Server VM.
 
 ---
 
-### 🖥️ Hostname Configuration
+### 🧾 Hostname Configuration
 
 This VM was renamed to reflect its role in the domain (`winserv-dc1`).
 
