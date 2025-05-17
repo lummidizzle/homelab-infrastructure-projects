@@ -4,7 +4,8 @@
 ![Admin User Setup](images/admin-user-setup.png)
 
 ### DHCP Address Display
-![Hostname + IP](images/dhcp-addy.png)
+![Hostname + IP](images/hostname-IP.png)
+
 
 ### Hostname Setup
 ![Hostname Setup](images/hostname-setup.png)
