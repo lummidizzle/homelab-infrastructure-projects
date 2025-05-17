@@ -3,7 +3,7 @@
 ### Admin User + Sudo Setup
 ![Admin User Setup](images/admin-user-setup.png)
 
-### DHCP Address Display
+### Hostname + IP Display
 ![Hostname + IP](images/hostname-IP.png)
 
 
