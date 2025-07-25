@@ -1,0 +1,140 @@
+⚙️ 1. RHEL 9 & 10 Post-Install Hardening Script
+Why: Security-first, baby. We're building for DoD/enterprise-level use.
+Includes:
+
+Disable root SSH login
+
+Enforce password complexity
+
+Configure firewalld
+
+Lock down unused services
+
+Set auditd and log rotation
+
+Set kernel params for sysctl hardening
+✅ We'll do this in a reusable bash script and document it under rhel9/ and rhel10/.
+
+📦 2. YUM/DNF Repo & Offline Package Cache
+Why: Because real sysadmins don’t rely on internet all the time.
+Includes:
+
+Create a local repo on a server
+
+Mirror CentOS/RHEL packages
+
+Configure clients to pull from local
+✅ Perfect for future patching/air-gapped deployments. Document under ansible/ or a new repos/ folder.
+
+📜 3. Automated RHEL Kickstart File
+Why: Manual installs are for rookies.
+Includes:
+
+Custom ks.cfg file for unattended RHEL 9/10 installs
+
+Pre-configure partitioning, users, network
+
+Hosted on Apache/NFS
+✅ Build once, deploy forever. Document in assets/scripts/ or a new automation/ folder.
+
+🔍 4. Install and Test OpenSCAP for STIG Compliance
+Why: You said DoD. Let’s act DoD.
+Includes:
+
+Install openscap-scanner
+
+Run baseline security scans
+
+Generate HTML reports
+
+Remediate with profile-based fix scripts
+✅ We’ll document and store output under rhel9/compliance/.
+
+🔄 5. Setup Central Ansible Control Node for Linux Fleet
+Why: Automate everything or die tryin’.
+Includes:
+
+ansible.cfg setup
+
+Inventory file with all Linux servers
+
+First playbooks for: updates, user creation, uptime check
+✅ Create and document under ansible/ and maybe introduce roles/.
+
+=========================================================================
+🔥 Phase 1: Linux Core Admin Skills (Foundation + Real-World Usage)
+We’ll structure it around tools used daily by real-world sysadmins:
+
+🧑🏾‍💻 User Management
+useradd, usermod, groupadd, passwd, id
+
+Manual: Create users, groups, set passwords
+
+Scripted: Automate bulk user creation
+
+Extras: vipw, /etc/shadow, /etc/passwd deep dive
+
+🔐 Permissions and Access Control
+chmod, chown, chgrp
+
+Manual: File and directory permissions (basic to advanced)
+
+Scripted: Permission audit and fix tool
+
+Extras: umask, getfacl, setfacl (ACLs explained with real usage)
+
+🛠️ Resource Monitoring Tools
+top, htop, uptime, vmstat, iostat, free
+
+Manual: Real-time performance tracking
+
+Extras: Bash script to log usage spikes
+
+🧳 Archiving & Backup
+tar, rsync, scp, gzip, bzip2
+
+Manual: Compress, archive, sync directories
+
+Scripted: Daily backup job script (e.g., user home dirs)
+
+📜 System Logs
+journalctl, dmesg, /var/log/*, rsyslog
+
+Manual: How to read logs and troubleshoot
+
+Scripted: Log parser that notifies on errors
+
+📘 Phase 2: Real-World Linux Admin Tasks
+🔄 Service & Process Management
+systemctl, ps, kill, nice, renice, crontab
+
+Auto-restart failed services
+
+Script: Restart nginx if it fails, log the event
+
+📡 Networking Essentials
+ip, ss, netstat, dig, nmcli, firewalld
+
+How to configure static IP, DNS, and firewall
+
+Script: Basic connectivity health check
+
+🧩 Disk & Filesystem
+df, du, lsblk, mount, umount, parted, fstab
+
+Resize LVM, troubleshoot full disk
+
+Script: Disk usage audit tool
+
+🧠 Bonus: Modern Tools Admins Are Using
+I’ll add these as we go, but expect:
+
+cockpit – Web-based GUI for server management
+
+glances – Advanced real-time monitoring
+
+tuned – Performance tuning profiles
+
+fail2ban – Brute-force protection
+
+ncdu – Interactive disk usage analyzer
