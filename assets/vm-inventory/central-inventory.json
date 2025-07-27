@@ -1,0 +1,26 @@
+﻿[
+    {
+        "Path":  "D:\\VMs\\Rhel9-HP2\\Rhel9-HP2.vmx",
+        "LastWrite":  "\/Date(1753557468306)\/",
+        "VMName":  "Rhel9-HP2",
+        "SizeMB":  0
+    },
+    {
+        "Path":  "D:\\VMs\\Rocky-Linux-HP2\\Rocky-Linux-HP2.vmx",
+        "LastWrite":  "\/Date(1753558415650)\/",
+        "VMName":  "Rocky-Linux-HP2",
+        "SizeMB":  0
+    },
+    {
+        "Path":  "D:\\VMs\\Snapshots\\Red Hat Enterprise Linux 9 64-bit.vmx",
+        "LastWrite":  "\/Date(1753150376829)\/",
+        "VMName":  "Snapshots",
+        "SizeMB":  0
+    },
+    {
+        "Path":  "D:\\VMs\\Ubuntu-HP2\\Ubuntu-HP2.vmx",
+        "LastWrite":  "\/Date(1753557724848)\/",
+        "VMName":  "Ubuntu-HP2",
+        "SizeMB":  0
+    }
+]
