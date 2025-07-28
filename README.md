@@ -1,4 +1,4 @@
-#  Olumide Familusi
+﻿# Olumide Familusi
 
 **Linux Systems Engineer** | RHCSA | RHCE | Security+ | Infrastructure & Automation Enthusiast
 
@@ -8,77 +8,65 @@
 
 ---
 
- **##  Table of Contents
-- [##  Table of Contents
-- [## 📚 Table of Contents
-- [About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
-About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
 ## 📚 Table of Contents
 - [About Me](#about-me)
 - [Current Projects](#current-projects)
 - [What You'll Find in My Repos](#what-youll-find-in-my-repos)
 - [Certifications](#certifications)
-About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
-##  Table of Contents
-- [## 📚 Table of Contents
-- [About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
-About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
-## 📚 Table of Contents
-- [About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
-About Me**
-
-Hi there! Im Olumide  a passionate Linux Systems Engineer on a journey to build, break, and rebuild world-class infrastructure. I come from a non-traditional background, and after years of self-learning and homelab grinding, Ive earned RHCSA, RHCE, and Security+ certifications.
-
-I specialize in Red Hat-based systems, configuration management with Ansible, system hardening (STIG), monitoring (Nagios), patching, and automation. My superpower? Turning bare-metal machines into enterprise-grade platforms using nothing but terminal magic, a lot of caffeine , and rock-solid shell scripts.
-
- **Current Projects**
-- Comprehensive hybrid homelab (Windows Server 2022, RHEL 9/10, CentOS 9, Ubuntu Lite)
-- Ansible automation for VM provisioning, user management, patching, and log cleanup
-- GitHub-powered infrastructure documentation with scheduled syncs
-- Centralized monitoring with Nagios and compliance auditing
-
- **What You'll Find in My Repos**
-- Real-world homelab setups, fully documented and automated
-- Scripts for optimizing Windows & Linux systems
-- Infrastructure-as-Code examples using Ansible
-- GitHub Actions for automation
-
- **Certifications**
-- Red Hat Certified System Administrator (RHCSA)
-- Red Hat Certified Engineer (RHCE)
-- CompTIA Security+
-
- **Lets Connect**
-- Email: [lummyfam@gmail.com](mailto:lummyfam@gmail.com)
-- LinkedIn: [www.linkedin.com/in/lummyd](https://www.linkedin.com/in/lummyd)
-
- Fun Fact: I believe every Linux engineer should own a homelabits the gym where we train our skills.
+- [Let's Connect](#lets-connect)
 
 ---
 
-> *"I may not have come from a traditional IT path, but my homelab is proof that passion, persistence, and a terminal window can get you anywhere."*
+## About Me
 
+Hi there! I’m Olumide — a passionate Linux Systems Engineer on a journey to build, break, and rebuild world-class infrastructure.
 
+I come from a non-traditional background, and after years of self-learning and homelab grinding, I've earned **RHCSA**, **RHCE**, and **Security+** certifications.
 
+I specialize in:
+- Red Hat-based systems
+- Configuration management with **Ansible**
+- System hardening (**STIG**)
+- Monitoring (**Nagios**)
+- Patching and automation
 
+🧙‍♂️ My superpower? Turning bare-metal machines into enterprise-grade platforms using terminal magic, gallons of coffee, and rock-solid shell scripts.
 
+---
 
+## Current Projects
 
+- 🔧 **Comprehensive hybrid homelab**: Windows Server 2022, RHEL 9/10, CentOS 9, Ubuntu Lite  
+- 🤖 **Ansible automation**: VM provisioning, user management, patching, and log cleanup  
+- 🗂️ **GitHub-powered documentation**: Automated syncing with GitHub Actions  
+- 📈 **Monitoring & compliance**: Centralized Nagios setup, STIG auditing, log rotation  
+
+---
+
+## What You'll Find in My Repos
+
+- Real-world homelab setups, fully documented and automated  
+- Scripts for optimizing Windows & Linux systems  
+- Infrastructure-as-Code examples using **Ansible**  
+- GitHub Actions workflows for cleanup, sync, and automation  
+
+---
+
+## Certifications
+
+- ✅ **Red Hat Certified System Administrator (RHCSA)**
+- ✅ **Red Hat Certified Engineer (RHCE)**
+- ✅ **CompTIA Security+**
+
+---
+
+## Let's Connect
+
+- 📧 Email: [lummyfam@gmail.com](mailto:lummyfam@gmail.com)  
+- 🔗 LinkedIn: [linkedin.com/in/lummyd](https://www.linkedin.com/in/lummyd)  
+
+💬 _Fun Fact_: I believe every Linux engineer should own a homelab — it’s the gym where we train our skills.
+
+---
+
+> _"I may not have come from a traditional IT path, but my homelab is proof that passion, persistence, and a terminal window can get you anywhere."_
