@@ -8,7 +8,22 @@
 
 ---
 
- **About Me**
+ **##  Table of Contents
+- [## ðŸ“š Table of Contents
+- [About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+## ðŸ“š Table of Contents
+- [About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+About Me**
 
 Hi there! Im Olumide  a passionate Linux Systems Engineer on a journey to build, break, and rebuild world-class infrastructure. I come from a non-traditional background, and after years of self-learning and homelab grinding, Ive earned RHCSA, RHCE, and Security+ certifications.
 
@@ -40,5 +55,9 @@ I specialize in Red Hat-based systems, configuration management with Ansible, sy
 ---
 
 > *"I may not have come from a traditional IT path, but my homelab is proof that passion, persistence, and a terminal window can get you anywhere."*
+
+
+
+
 
 
