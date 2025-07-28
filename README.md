@@ -1,4 +1,4 @@
-﻿#  Olumide Familusi
+#  Olumide Familusi
 
 **Linux Systems Engineer** | RHCSA | RHCE | Security+ | Infrastructure & Automation Enthusiast
 
@@ -9,7 +9,8 @@
 ---
 
  **##  Table of Contents
-- [## ðŸ“š Table of Contents
+- [##  Table of Contents
+- [## 📚 Table of Contents
 - [About Me](#about-me)
 - [Current Projects](#current-projects)
 - [What You'll Find in My Repos](#what-youll-find-in-my-repos)
@@ -18,7 +19,26 @@ About Me](#about-me)
 - [Current Projects](#current-projects)
 - [What You'll Find in My Repos](#what-youll-find-in-my-repos)
 - [Certifications](#certifications)
-## ðŸ“š Table of Contents
+## 📚 Table of Contents
+- [About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+##  Table of Contents
+- [## 📚 Table of Contents
+- [About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+About Me](#about-me)
+- [Current Projects](#current-projects)
+- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
+- [Certifications](#certifications)
+## 📚 Table of Contents
 - [About Me](#about-me)
 - [Current Projects](#current-projects)
 - [What You'll Find in My Repos](#what-youll-find-in-my-repos)
@@ -55,6 +75,7 @@ I specialize in Red Hat-based systems, configuration management with Ansible, sy
 ---
 
 > *"I may not have come from a traditional IT path, but my homelab is proof that passion, persistence, and a terminal window can get you anywhere."*
+
 
 
 
