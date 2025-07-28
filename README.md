@@ -40,3 +40,4 @@ I specialize in Red Hat-based systems, configuration management with Ansible, sy
 ---
 
 > *"I may not have come from a traditional IT path, but my homelab is proof that passion, persistence, and a terminal window can get you anywhere."*
+
