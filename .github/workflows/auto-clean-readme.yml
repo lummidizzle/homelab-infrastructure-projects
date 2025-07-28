@@ -1,0 +1,26 @@
+﻿name: Auto-Clean README Weekly
+
+on:
+  schedule:
+    - cron: '0 7 * * 0'  # Every Sunday at 7 AM UTC
+  workflow_dispatch:
+
+jobs:
+  sanitize-readme:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run PowerShell Script to Clean README
+        shell: pwsh
+        run: ./upgrade-readme.ps1
+
+      - name: Commit cleaned README
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add README.md
+          git commit -m "ci: auto-clean README"
+          git push
