@@ -16,6 +16,7 @@ jobs:
       - name: Run PowerShell Script to Clean README
         shell: pwsh
         run: ./upgrade-readme.ps1
+        working-directory: ${{ github.workspace }}
 
       - name: Commit cleaned README
         run: |
