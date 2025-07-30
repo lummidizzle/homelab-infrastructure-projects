@@ -1,0 +1,7 @@
+---
+- name: Deploy /etc/hosts file to all servers
+  hosts: all
+  become: yes
+  roles:
+    - hostsfile
+
