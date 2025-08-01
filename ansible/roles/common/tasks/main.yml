@@ -1,0 +1,23 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Set timezone
+  community.general.timezone:
+    name: America/Chicago
+
+- name: Install EPEL on RHEL 7/8
+  ansible.builtin.yum:
+    name: epel-release
+    state: present
+  when: ansible_distribution == "RedHat" and ansible_distribution_major_version | int < 9
+
+- name: Install EPEL on RHEL 9
+  ansible.builtin.command:
+    cmd: dnf install -y epel-release
+  become: true
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_major_version | int == 9
+    - install_epel | default(false)

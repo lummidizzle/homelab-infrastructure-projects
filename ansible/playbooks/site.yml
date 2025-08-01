@@ -1,0 +1,7 @@
+---
+- name: Apply base configuration to all servers
+  hosts: all
+  become: true
+  roles:
+    - common
+

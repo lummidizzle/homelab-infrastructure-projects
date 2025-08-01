@@ -1,9 +1,9 @@
----
-- name: Deploy custom /etc/hosts file
-  ansible.builtin.template:
-    src: hosts.j2
-    dest: /etc/hosts
+#---
+-# name: Deploy custom /etc/hosts file
+  #ansible.builtin.template:
+  # src: hosts.j2
+  # dest: /etc/hosts
     owner: root
-    group: root
-    mode: '0644'
+      #    group: root
+    mod#e: '0644'
 
