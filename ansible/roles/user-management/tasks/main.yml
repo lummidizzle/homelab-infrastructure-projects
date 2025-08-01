@@ -1,0 +1,19 @@
+---
+- name: Ensure 'oluadmin' user has proper shell
+  ansible.builtin.user:
+    name: oluadmin
+    shell: /bin/bash
+
+- name: Add 'oluadmin' to sudo or wheel group
+  ansible.builtin.user:
+    name: oluadmin
+    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
+    append: yes
+
+# Optional: enforce SSH key (if we provide a public key later)
+# - name: Ensure authorized key is set for oluadmin
+#   ansible.builtin.authorized_key:
+#     user: oluadmin
+#     state: present
+#     key: "{{ lookup('file', 'files/id_rsa.pub') }}"
+
