@@ -41,6 +41,17 @@ I specialize in:
 - 🗂️ **GitHub-powered documentation**: Automated syncing with GitHub Actions  
 - 📈 **Monitoring & compliance**: Centralized Nagios setup, STIG auditing, log rotation  
 
+### 🧩 Ansible Automation Docs
+
+Explore step-by-step guides on:
+- SSH key distribution
+- Local repo and client setup
+- Automated weekly Git syncing
+- Inventory management (coming soon)
+- Ubuntu & RHEL patching (in progress)
+
+👉 [Click here to view the Ansible documentation index](ansible/docs/index.md)
+
 ---
 
 ## What You'll Find in My Repos
