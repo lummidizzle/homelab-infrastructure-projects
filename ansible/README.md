@@ -67,6 +67,9 @@ See [`error-log.md`](./error-log.md) for a running list of:
 - Any odd system behavior worth tracking
 
 ---
+## 📚 Documentation
+
+- [Ansible Local Repository Setup Guide](./docs/ansible-local-repo-setup.md) — How to configure a local YUM/DNF repo with Apache, fix SELinux issues, and verify using Ansible.
 
 ## 🧠 Notes
 
