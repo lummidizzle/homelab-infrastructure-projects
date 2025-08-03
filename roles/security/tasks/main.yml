@@ -1,0 +1,119 @@
+---
+# ---------------------
+# FIREWALL CONFIG
+# ---------------------
+- name: Install and enable firewalld on RHEL
+  ansible.builtin.yum:
+    name: firewalld
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Start and enable firewalld on RHEL
+  ansible.builtin.service:
+    name: firewalld
+    enabled: true
+    state: started
+  when: ansible_os_family == "RedHat"
+
+- name: Open firewall ports on RHEL
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop:
+    - 22/tcp
+    - 80/tcp
+    - 443/tcp
+    - 2049/tcp
+    - 2049/udp
+    - 389/tcp
+    - 389/udp
+    - 636/tcp
+    - 137-139/tcp
+    - 137-139/udp
+    - 445/tcp
+    - 445/udp
+    - 25/tcp
+    - 465/tcp
+    - 53/tcp
+    - 53/udp
+    - 514/udp
+    - 5666/tcp
+    - 9418/tcp
+  when: ansible_os_family == "RedHat"
+
+# ---------------------
+# UFW on Ubuntu
+# ---------------------
+- name: Install ufw on Debian
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Allow essential ports on Ubuntu
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: "{{ 'udp' if item in ['2049', '389', '53', '137', '138', '514'] else 'tcp' }}"
+  loop:
+    - 22
+    - 80
+    - 443
+    - 2049
+    - 389
+    - 636
+    - 137
+    - 138
+    - 139
+    - 445
+    - 25
+    - 465
+    - 53
+    - 514
+    - 5666
+    - 9418
+  when: ansible_os_family == "Debian"
+
+- name: Enable ufw
+  community.general.ufw:
+    state: enabled
+    policy: allow
+  when: ansible_os_family == "Debian"
+
+# ---------------------
+# SECURITY TOOLS
+# ---------------------
+- name: Install baseline security tools
+  ansible.builtin.package:
+    name:
+      - aide
+      - audit
+    state: present
+
+- name: Enable and start auditd
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+  when: ansible_service_mgr == "systemd"
+
+- name: Initialize AIDE
+  ansible.builtin.command: /usr/sbin/aide --init
+  args:
+    creates: /var/lib/aide/aide.db.gz
+
+# ---------------------
+# EXTRA HARDENING ONLY ON security.corp.local
+# ---------------------
+- name: Install full security stack
+  ansible.builtin.package:
+    name:
+      - rkhunter
+      - clamav
+      - chkrootkit
+    state: present
+  when: inventory_hostname == "security.corp.local"
+
