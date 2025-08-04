@@ -1,83 +1,47 @@
-﻿# Olumide Familusi
+﻿# 🧰 Homelab Infrastructure Projects
 
-**Linux Systems Engineer** | RHCSA | RHCE | Security+ | Infrastructure & Automation Enthusiast
+Welcome to my hybrid IT lab – a hands-on infrastructure playground where I'm building a production-style environment using real-world tools and automation.
 
-![Profile Views](https://komarev.com/ghpvc/?username=lummidizzle&color=blue)
-![Followers](https://img.shields.io/github/followers/lummidizzle?label=Follow&style=social)
-![Repos](https://img.shields.io/badge/Public_Repos-Open%20Lab-informational)
+🌐 **LIVE DEMO:** [Visit GitHub Pages Site](https://lummidizzle.github.io/homelab-infrastructure-projects/)
 
 ---
 
-## 📚 Table of Contents
-- [About Me](#about-me)
-- [Current Projects](#current-projects)
-- [What You'll Find in My Repos](#what-youll-find-in-my-repos)
-- [Certifications](#certifications)
-- [Let's Connect](#lets-connect)
+## 📂 Project Overview
+
+| Server Role            | Description |
+|------------------------|-------------|
+| `ansible/`             | Automation roles and playbooks (using Ansible Core) |
+| `backup/`              | Backup configuration and policies |
+| `nagios/`              | Monitoring setup with Nagios Core |
+| `scripts/`             | Cleanup and optimization scripts (PowerShell + Bash) |
+| `rhel9/`, `rhel10/`    | RHEL system configs, hardening, automation |
+| `windows-server-2022/` | Active Directory, DNS, GPO, and domain configs |
+| `ubuntu-lite/`         | Lightweight Ubuntu setups for testing |
 
 ---
 
-## About Me
+## 🛠️ Technologies Used
 
-Hi there! I’m Olumide — a passionate Linux Systems Engineer on a journey to build, break, and rebuild world-class infrastructure.
-
-I come from a non-traditional background, and after years of self-learning and homelab grinding, I've earned **RHCSA**, **RHCE**, and **Security+** certifications.
-
-I specialize in:
-- Red Hat-based systems
-- Configuration management with **Ansible**
-- System hardening (**STIG**)
-- Monitoring (**Nagios**)
-- Patching and automation
-
-🧙‍♂️ My superpower? Turning bare-metal machines into enterprise-grade platforms using terminal magic, gallons of coffee, and rock-solid shell scripts.
+- Red Hat, CentOS, Ubuntu
+- Ansible Automation
+- GitHub Actions
+- Nagios Monitoring
+- PowerShell & Bash
+- Windows Server 2022 + AD
 
 ---
 
-## Current Projects
+## 🔄 Automation in Progress
 
-- 🔧 **Comprehensive hybrid homelab**: Windows Server 2022, RHEL 9/10, CentOS 9, Ubuntu Lite  
-- 🤖 **Ansible automation**: VM provisioning, user management, patching, and log cleanup  
-- 🗂️ **GitHub-powered documentation**: Automated syncing with GitHub Actions  
-- 📈 **Monitoring & compliance**: Centralized Nagios setup, STIG auditing, log rotation  
-
-### 🧩 Ansible Automation Docs
-
-Explore step-by-step guides on:
-- SSH key distribution
-- Local repo and client setup
-- Automated weekly Git syncing
-- Inventory management (coming soon)
-- Ubuntu & RHEL patching (in progress)
-
-👉 [Click here to view the Ansible documentation index](ansible/docs/index.md)
+- GitHub Actions auto-deploys this repo to GitHub Pages
+- Auto-cleans README weekly to stay fresh
+- Scripts for VM inventory syncing, cleanup, and GitHub push
 
 ---
 
-## What You'll Find in My Repos
+## 🧠 Why This Matters
 
-- Real-world homelab setups, fully documented and automated  
-- Scripts for optimizing Windows & Linux systems  
-- Infrastructure-as-Code examples using **Ansible**  
-- GitHub Actions workflows for cleanup, sync, and automation  
+This repo serves as a living portfolio of my evolving infrastructure skills—automation-first, security-minded, and well-documented.
 
----
+> “Document everything. Automate the rest.” — Future Me
 
-## Certifications
-
-- ✅ **Red Hat Certified System Administrator (RHCSA)**
-- ✅ **Red Hat Certified Engineer (RHCE)**
-- ✅ **CompTIA Security+**
-
----
-
-## Let's Connect
-
-- 📧 Email: [lummyfam@gmail.com](mailto:lummyfam@gmail.com)  
-- 🔗 LinkedIn: [linkedin.com/in/lummyd](https://www.linkedin.com/in/lummyd)  
-
-💬 _Fun Fact_: I believe every Linux engineer should own a homelab — it’s the gym where we train our skills.
-
----
-
-> _"I may not have come from a traditional IT path, but my homelab is proof that passion, persistence, and a terminal window can get you anywhere."_
