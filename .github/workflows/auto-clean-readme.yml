@@ -3,7 +3,7 @@
 on:
   schedule:
     - cron: '0 7 * * 0'  # Every Sunday at 7 AM UTC
-  workflow_dispatch:
+  workflow_dispatch:     # Allow manual trigger
 
 permissions:
   contents: write
@@ -21,10 +21,13 @@ jobs:
         run: ./upgrade-readme.ps1
         working-directory: ${{ github.workspace }}
 
-      - name: Commit cleaned README
+      - name: Commit changes if needed
+        shell: bash
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add README.md
-          git commit -m "ci: auto-clean README"
-          git push
+          set -e
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git diff --cached --exit-code || git commit -m "Auto-clean README"
+          git push origin HEAD --force-with-lease
+
