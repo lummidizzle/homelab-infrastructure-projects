@@ -1,0 +1,36 @@
+---
+- name: Update Ubuntu servers weekly
+  hosts:
+    - glpi.corp.local
+    - syslog.corp.local
+    - staging.corp.local
+  become: true
+
+  tasks:
+    - name: Update APT cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 86400
+
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+
+    - name: Ensure security packages are installed
+      ansible.builtin.apt:
+        name:
+          - auditd
+          - aide
+          - ufw
+        state: present
+
+    - name: Allow SSH through UFW
+      ansible.builtin.command: ufw allow OpenSSH
+      when: ansible_facts['distribution'] == "Ubuntu"
+
+    - name: Enable UFW (forcefully)
+      ansible.builtin.command: ufw --force enable
+      when: ansible_facts['distribution'] == "Ubuntu"
+

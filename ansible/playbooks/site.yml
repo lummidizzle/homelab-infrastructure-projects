@@ -1,7 +1,20 @@
----
 - name: Apply base configuration to all servers
   hosts: all
   become: true
   roles:
     - common
-    - user-management 
+    - user-management
+
+- name: Install and configure Nagios Core on the monitoring server
+  hosts: monitoring
+  become: true
+  roles:
+    - monitoring
+
+- name: Apply backup configuration to the backup server
+  hosts: backup
+  become: true
+  become_method: sudo
+  roles:
+    - backup
+

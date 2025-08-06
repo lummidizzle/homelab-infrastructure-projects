@@ -1,0 +1,55 @@
+# roles/backup/tasks/main.yml
+---
+- name: Install rsync
+  ansible.builtin.yum:
+    name: rsync
+    state: present
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Install logrotate
+  ansible.builtin.yum:
+    name: logrotate
+    state: present
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Create /var/backups directory
+  ansible.builtin.file:
+    path: /var/backups
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Create /var/log directory (for backup logging, if not present)
+  ansible.builtin.file:
+    path: /var/log
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Create backup script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/daily-backup.sh
+    content: |
+      #!/bin/bash
+      LOGFILE="/var/log/backup.log"
+      rsync -av --delete /etc /var/backups/ >> "$LOGFILE" 2>&1
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+
+- name: Add cron job for daily backup
+  ansible.builtin.cron:
+    name: "Daily backup"
+    minute: "0"
+    hour: "2"
+    job: "/usr/local/bin/daily-backup.sh"
+    user: root
+  become: true
+
