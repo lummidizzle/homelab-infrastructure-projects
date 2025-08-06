@@ -1,43 +1,63 @@
-# 📚 Ansible Documentation Hub
-
-Welcome to the centralized documentation for Ansible automation in the **Homelab Infrastructure Project**. This directory contains detailed guides, configurations, and notes for each core phase of your Ansible implementation.
 
 ---
 
-## 🔐 SSH Configuration
+## ✅ Note 2: `ansible/docs/index.md`
 
-- [SSH Key Distribution](ssh-key-distribution.md)  
-  Step-by-step instructions to configure passwordless SSH across all managed nodes.
+```markdown
+# Ansible Documentation Hub (Homelab Infrastructure Project)
 
----
+Welcome to the centralized documentation hub for the `homelab-infrastructure-projects` Ansible configuration. This directory is where all role-specific and project-wide documentation lives for future reference, reproducibility, and collaboration.
 
-## 📦 Repository Management
+## 📁 Documentation Structure
 
-- [Ansible Local Repo Setup](ansible-local-repo-setup.md)  
-  Instructions for creating a local DNF/YUM repository and syncing it with remote mirrors.
-
-- [Repo Client Setup + Troubleshooting](repo-client-setup.md)  
-  Configure client servers to use your local repo with SELinux fixes, errors, and resolutions.
+Each major Ansible role or component in our infrastructure has its own subdirectory and a detailed `README.md` file. Use this index to quickly navigate to any part of the configuration and see what was done, why it was done, and how to replicate it.
 
 ---
 
-## 🔁 Automation & Scheduling
+### 🔧 Ansible Roles
 
-- [Weekly Git Auto-Sync](weekly-git-sync.md)  
-  Automate syncing Ansible changes to GitHub with a cron-based shell script.
+| Role             | Description                                            | Documentation Link                        |
+|------------------|--------------------------------------------------------|--------------------------------------------|
+| Common           | Base configuration for all servers                    | [common/README.md](common/README.md)       |
+| User Management  | Manages local users, groups, and sudo permissions     | [user-management/README.md](user-management/README.md) |
+| Monitoring       | Nagios Core setup and configuration                   | [monitoring/README.md](monitoring/README.md) |
+| Security         | Installs AIDE, auditd, UFW, and rootkit detection     | [security/README.md](security/README.md)   |
+| Backup           | rsync-based backup and log rotation tasks             | [backup/README.md](backup/README.md)       |
+| DNS-NFS          | DNS server and NFS shares configuration               | [dns-nfs/README.md](dns-nfs/README.md)     |
+| Reposync         | Local YUM repo mirroring and management               | [reposync/README.md](reposync/README.md)   |
+| GLPI             | IT asset and ticketing system deployment              | [glpi/README.md](glpi/README.md)           |
+| Staging          | Dev/staging server setup and configurations           | [staging/README.md](staging/README.md)     |
+| DevOps           | Automation tools and version control integrations     | [devops/README.md](devops/README.md)       |
+| Syslog           | Centralized log collection using rsyslog              | [syslog/README.md](syslog/README.md)       |
+| Security         | Hardening, compliance, and monitoring integrations    | [security/README.md](security/README.md)   |
 
 ---
 
-## 🛠️ Coming Soon
+## 🛠️ How to Use This Hub
 
-- Role Creation & Management  
-- System Hardening Playbooks  
-- Service Monitoring (Nagios integration)  
-- Security Roles with AIDE, auditd, and custom alerts  
-- Inventory Management & Dynamic Groups
+- Each role has its **own folder** under `ansible/roles/` and an associated **docs folder** under `ansible/docs/`.
+- All changes made via Ansible should be reflected in both code and documentation.
+- When updating or creating a new role, remember to:
+  1. Add/update the corresponding `README.md`.
+  2. List it here in the table with a link.
+  3. Commit the changes to GitHub.
 
 ---
 
-🗃️ *Documentation maintained by:* `oluadmin`  
-🕒 *Last updated:* 2025-08-03
+## 🗂️ Other References
+
+- [Project Goals & Blueprint](../README.md)
+- [Troubleshooting Logs](../troubleshooting.md)
+- [Server IP Map](../assets/ip-map.md)
+- [Playbook Directory](../playbooks/)
+
+---
+
+## 🔄 Last Updated
+
+`2025-08-06` — All monitoring tasks and documentation added. Role active in live inventory.
+
+---
+
+This index is the map to our Ansible-powered kingdom. Keep it up to date or be lost in YAML forever.
 
