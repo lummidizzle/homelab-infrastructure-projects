@@ -74,7 +74,8 @@ If it ain’t documented and repeatable, it didn’t happen. That’s the mantra
 ## 🔗 Links
 
 - 📁 GitHub Repo Root: [homelab-infrastructure-projects](https://github.com/lummidizzle/homelab-infrastructure-projects)  
-- 📄 [error-log.md](./error-log.md)  
+- 📄 - [error-log.md](docs/error-log.md)
+ 
 
 ---
 
