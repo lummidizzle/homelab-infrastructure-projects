@@ -1,0 +1,133 @@
+---
+- name: Point RHEL servers to local repo
+  hosts: rhel-servers
+  become: true
+  gather_facts: yes
+
+  vars:
+    # Use the temporary Python HTTP server on port 8080 for now.
+    # When you switch to nginx on port 80, change to:
+    # base_url: "http://reposync.corp.local/central-repo"
+    base_url: "http://reposync.corp.local:8080"
+    baseos_url: "{{ base_url }}/baseos"
+    appstream_url: "{{ base_url }}/appstream"
+    crb_url: "{{ base_url }}/crb"
+
+  pre_tasks:
+    - name: Ensure we are on RedHat family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "RedHat"
+        fail_msg: "This playbook only applies to RedHat-family systems."
+
+    - name: Check BaseOS repo is reachable
+      ansible.builtin.uri:
+        url: "{{ baseos_url }}/repodata/repomd.xml"
+        method: GET
+        status_code: 200
+        return_content: false
+      register: baseos_http
+
+    - name: Check AppStream repo is reachable
+      ansible.builtin.uri:
+        url: "{{ appstream_url }}/repodata/repomd.xml"
+        method: GET
+        status_code: 200
+        return_content: false
+      register: appstream_http
+
+    - name: Check CRB repo (may not exist until tonight)
+      ansible.builtin.uri:
+        url: "{{ crb_url }}/repodata/repomd.xml"
+        method: GET
+        status_code: 200
+        return_content: false
+      register: crb_http
+      failed_when: false
+
+    - name: Fail early if BaseOS/AppStream aren’t reachable
+      ansible.builtin.assert:
+        that:
+          - baseos_http.status == 200
+          - appstream_http.status == 200
+        fail_msg: "BaseOS/AppStream not reachable at {{ base_url }}. Start HTTP server or check firewall/DNS."
+
+  tasks:
+    - name: Backup existing repo files (once per day)
+      ansible.builtin.shell: |
+        set -e
+        BDIR="/etc/yum.repos.d/backup-$(date +%F)"
+        mkdir -p "$BDIR"
+        shopt -s nullglob || true
+        for f in /etc/yum.repos.d/*.repo; do
+          mv "$f" "$BDIR"/
+        done
+      args:
+        executable: /bin/bash
+
+    - name: Write local BaseOS repo
+      ansible.builtin.copy:
+        dest: /etc/yum.repos.d/local-baseos.repo
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [local-baseos]
+          name=Local BaseOS
+          baseurl={{ baseos_url }}
+          enabled=1
+          gpgcheck=0
+
+    - name: Write local AppStream repo
+      ansible.builtin.copy:
+        dest: /etc/yum.repos.d/local-appstream.repo
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [local-appstream]
+          name=Local AppStream
+          baseurl={{ appstream_url }}
+          enabled=1
+          gpgcheck=0
+
+    - name: Write local CRB repo (auto-enable only if repodata exists)
+      ansible.builtin.copy:
+        dest: /etc/yum.repos.d/local-crb.repo
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [local-crb]
+          name=Local CRB
+          baseurl={{ crb_url }}
+          enabled={{ 1 if (crb_http is defined and crb_http.status|default(0) == 200) else 0 }}
+          gpgcheck=0
+
+    - name: Clean and rebuild cache from local repos
+      ansible.builtin.shell: >
+        dnf clean all &&
+        dnf -y makecache --disablerepo='*'
+        --enablerepo=local-baseos,local-appstream{{ ',local-crb' if (crb_http.status|default(0) == 200) else '' }}
+      args:
+        executable: /bin/bash
+
+    - name: Sanity check package availability (NetworkManager)
+      ansible.builtin.shell: >
+        dnf -q list NetworkManager --disablerepo='*'
+        --enablerepo=local-baseos,local-appstream{{ ',local-crb' if (crb_http.status|default(0) == 200) else '' }}
+      args:
+        executable: /bin/bash
+      register: nm_check
+      changed_when: false
+
+  post_tasks:
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Local repos configured:"
+          - "  BaseOS:     {{ baseos_url }}"
+          - "  AppStream:  {{ appstream_url }}"
+          - "  CRB:        {{ crb_url }} (enabled={{ (crb_http.status|default(0) == 200)|int }})"
+          - "NetworkManager list rc: {{ nm_check.rc }}"
+

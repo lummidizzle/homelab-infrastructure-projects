@@ -1,0 +1,22 @@
+# Local stuff
+*.retry
+*.swp
+*.swo
+*.log
+
+# Python junk
+__pycache__/
+*.pyc
+
+# Ansible vault temp
+*.vault-pass
+
+# Local logs & artifacts
+logs/
+sandbox/
+tmp/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+

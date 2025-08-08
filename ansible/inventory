@@ -28,6 +28,20 @@ devops.corp.local
 [security]
 security.corp.local
 
+[ubuntu-servers]
+syslog.corp.local
+glpi.corp.local
+staging.corp.local
+
+[rhel-servers]
+ansible.corp.local
+reposync.corp.local
+dns-nfs.corp.local
+monitoring.corp.local
+backup.corp.local
+devops.corp.local
+security.corp.local
+
 [infra:children]
 backup
 dns_nfs
@@ -37,7 +51,6 @@ syslog
 monitoring
 devops
 security
-
 
 [all:vars]
 ansible_user=oluadmin

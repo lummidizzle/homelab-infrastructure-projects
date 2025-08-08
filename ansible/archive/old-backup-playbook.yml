@@ -1,0 +1,8 @@
+# Deprecated – reference only.
+- hosts: backup
+  gather_facts: false
+  tasks:
+    - name: Old backup placeholder
+      debug:
+        msg: "This is an archived playbook – do not use."
+

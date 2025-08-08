@@ -1,0 +1,8 @@
+# Managed by Ansible – DO NOT EDIT
+Port {{ sshd_port | default(22) }}
+Protocol 2
+PermitRootLogin {{ sshd_permit_root | default('no') }}
+PasswordAuthentication {{ sshd_password_auth | default('no') }}
+UsePAM yes
+Subsystem sftp /usr/libexec/openssh/sftp-server
+

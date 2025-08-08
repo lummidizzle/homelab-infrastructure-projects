@@ -1,0 +1,11 @@
+---
+repo_baseos_url: "http://reposync.corp.local:8080/baseos"
+repo_appstream_url: "http://reposync.corp.local:8080/appstream"
+repo_crb_url: "http://reposync.corp.local:8080/crb"
+
+motd_enabled: true
+
+sshd_port: 22
+sshd_permit_root: "no"
+sshd_password_auth: "no"
+

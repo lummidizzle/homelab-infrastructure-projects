@@ -1,0 +1,9 @@
+{{ '-' * 60 }}
+Welcome to {{ inventory_hostname }}
+Role: {{ group_names | join(', ') }}
+Managed by Ansible @ {{ ansible_date_time.iso8601 }}
+
+Repo BaseOS:  http://reposync.corp.local:8080/baseos/
+Repo AppStream: http://reposync.corp.local:8080/appstream/
+{{ '-' * 60 }}
+

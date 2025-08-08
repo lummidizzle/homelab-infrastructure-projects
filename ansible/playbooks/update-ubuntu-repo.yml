@@ -1,0 +1,15 @@
+---
+- name: Update repositories on Ubuntu servers
+  hosts: ubuntu-servers
+  become: true
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Upgrade all packages to latest
+      apt:
+        upgrade: dist
+      when: ansible_os_family == "Debian"
+
