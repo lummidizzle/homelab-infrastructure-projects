@@ -1,22 +1,35 @@
-# Local stuff
-*.retry
-*.swp
-*.swo
-*.log
-
-# Python junk
+# Ignore Python cache and bytecode
 __pycache__/
 *.pyc
+*.pyo
 
-# Ansible vault temp
-*.vault-pass
+# Ignore Ansible temporary files
+*.retry
+*.tmp
+*.log
 
-# Local logs & artifacts
-logs/
-sandbox/
-tmp/
+# Ignore local environment files
+.env
+*.local
 
-# OS cruft
+# Ignore secrets and sensitive files
+secrets.yml
+vault.yml
+vault_password_file
+*.pem
+*.key
+
+# Ignore OS/system files
 .DS_Store
 Thumbs.db
+
+# Ignore backup files
+*~
+*.bak
+
+# Ignore compiled templates or generated files
+*.j2c
+
+# Ignore inventory backups
+inventory_backup/
 
