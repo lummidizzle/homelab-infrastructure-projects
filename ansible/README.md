@@ -51,7 +51,7 @@ Because real sysadmins automate the boring stuff and sip coffee while it runs â˜
 
 ## ğŸ Error Logging
 
-See [`error-log.md`](./error-log.md) for a running list of:  
+See [error-log.md](/ansible/docs/error-log.md) for a running list of:  
 - Bugs encountered during playbook runs  
 - Fixes, workarounds, and reasons  
 - Any odd system behavior worth tracking  
