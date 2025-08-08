@@ -1,19 +1,20 @@
 ---
-- name: Ensure 'oluadmin' user has proper shell
+- name: Ensure admin group exists
+  ansible.builtin.group:
+    name: admins
+    state: present
+
+- name: Create admin user
   ansible.builtin.user:
     name: oluadmin
+    comment: "Olumide Admin"
     shell: /bin/bash
+    groups: admins
+    append: true
+    state: present
 
-- name: Add 'oluadmin' to sudo or wheel group
-  ansible.builtin.user:
-    name: oluadmin
-    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
-    append: yes
-
-# Optional: enforce SSH key (if we provide a public key later)
-# - name: Ensure authorized key is set for oluadmin
-#   ansible.builtin.authorized_key:
-#     user: oluadmin
-#     state: present
-#     key: "{{ lookup('file', 'files/id_rsa.pub') }}"
-
+- name: Set authorized key for oluadmin
+  ansible.posix.authorized_key:
+    user: oluadmin
+    state: present
+    key: "{{ lookup('file', 'files/oluadmin_id_rsa.pub') }}"

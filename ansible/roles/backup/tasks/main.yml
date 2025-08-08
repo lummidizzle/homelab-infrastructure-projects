@@ -53,3 +53,11 @@
     user: root
   become: true
 
+- name: Deploy logrotate config for backup logs
+  ansible.builtin.copy:
+    src: logrotate-backup
+    dest: /etc/logrotate.d/backup
+    owner: root
+    group: root
+    mode: '0644'
+  become: true

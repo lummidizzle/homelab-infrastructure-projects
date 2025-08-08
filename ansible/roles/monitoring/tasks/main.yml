@@ -1,28 +1,14 @@
 ---
-- name: Install Nagios Core and plugins
+- name: Install Nagios packages
   ansible.builtin.yum:
     name:
       - nagios
       - nagios-plugins-all
-      - httpd
+      - nagios-plugins-nrpe
     state: present
-  when: ansible_os_family == "RedHat"
 
-- name: Ensure Nagios user password file exists
-  ansible.builtin.command: htpasswd -b -c /etc/nagios/passwd nagiosadmin MySecurePass123
-  args:
-    creates: /etc/nagios/passwd
-  notify: Restart Apache
-
-- name: Enable and start Apache
-  ansible.builtin.service:
-    name: httpd
-    enabled: true
-    state: started
-
-- name: Enable and start Nagios
+- name: Enable and start Nagios service
   ansible.builtin.service:
     name: nagios
     enabled: true
     state: started
-
