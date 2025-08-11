@@ -1,57 +1,170 @@
 ---
-- name: Install UFW, AIDE, and Auditd on Debian/Ubuntu
-  apt:
-    name:
-      - ufw
-      - aide
-      - auditd
-    state: present
-    update_cache: true
-  when: ansible_os_family == "Debian"
-  become: true
+# RHEL/Rocky 9 lean hardening (no CRB/EPEL)
 
-- name: Install AIDE and Auditd on RedHat
-  yum:
+- name: Ensure core packages are present
+  dnf:
     name:
-      - aide
       - audit
+      - aide
+      - rsyslog
+      - firewalld
+      - policycoreutils-python-utils
+      - chrony
     state: present
-  when: ansible_os_family == "RedHat"
-  become: true
+  tags: [security_baseline]
 
-- name: Enable and start auditd
-  service:
-    name: auditd
-    state: started
-    enabled: true
-  when: ansible_os_family in ["RedHat", "Debian"]
-  become: true
-
-- name: Enable and start UFW (Debian only)
-  service:
-    name: ufw
-    state: started
-    enabled: true
-  when: ansible_os_family == "Debian"
-  become: true
-
-- name: Copy aide.conf for Debian
+- name: Backup sshd_config
   copy:
-    src: aide.conf.debian
-    dest: /etc/aide/aide.conf
-    owner: root
-    group: root
+    src: /etc/ssh/sshd_config
+    dest: /etc/ssh/sshd_config.pre-sec-{{ ansible_date_time.iso8601 }}
+    remote_src: yes
     mode: '0644'
-  when: ansible_os_family == "Debian"
-  become: true
+  tags: [security_baseline]
 
-- name: Copy aide.conf for RedHat
+- name: SSH hardening (keys only, no root, quiet extras)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?\s*{{ item.key }}\b.*'
+    line: "{{ item.key }} {{ item.value }}"
+    backup: yes
+  loop:
+    - { key: 'PasswordAuthentication', value: 'no' }
+    - { key: 'PermitRootLogin',      value: 'no' }
+    - { key: 'UsePAM',               value: 'yes' }
+    - { key: 'GSSAPIAuthentication', value: 'no' }
+    - { key: 'X11Forwarding',        value: 'no' }
+  notify: Restart sshd
+  tags: [security_baseline]
+
+- name: Ensure journald drop-in directory exists
+  file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    mode: '0755'
+  tags: [security_baseline]
+
+- name: Limit journald size (drop-in)
   copy:
-    src: aide.conf.redhat
-    dest: /etc/aide.conf
-    owner: root
-    group: root
+    dest: /etc/systemd/journald.conf.d/size.conf
     mode: '0644'
-  when: ansible_os_family == "RedHat"
-  become: true
+    content: |
+      [Journal]
+      Storage=persistent
+      SystemMaxUse=300M
+      RuntimeMaxUse=100M
+  notify: Restart journald
+  tags: [security_baseline]
 
+- name: Configure rsyslog forward (durable queue)
+  copy:
+    dest: /etc/rsyslog.d/99-forward.conf
+    mode: '0644'
+    content: |
+      *.* @@syslog.corp.local:514
+      action(type="omfwd" target="syslog.corp.local" port="514" protocol="tcp"
+             queue.type="LinkedList"
+             queue.filename="fwdRule1"
+             queue.maxdiskspace="200m"
+             queue.saveonshutdown="on"
+             action.resumeRetryCount="-1"
+             action.resumeInterval="10")
+  notify: Restart rsyslog
+  tags: [security_baseline]
+
+- name: Ensure firewalld is running
+  service: { name: firewalld, state: started, enabled: yes }
+  tags: [security_baseline]
+
+- name: Allow only SSH in public zone
+  firewalld:
+    service: ssh
+    permanent: yes
+    state: enabled
+    immediate: yes
+  notify: Reload firewalld
+  tags: [security_baseline]
+
+- name: Disable common extra services in public zone (ignore if absent)
+  firewalld:
+    service: "{{ item }}"
+    zone: public
+    permanent: yes
+    state: disabled
+    immediate: yes
+  loop: [dhcpv6-client, cockpit, http, https, samba]
+  ignore_errors: true
+  notify: Reload firewalld
+  tags: [security_baseline]
+
+# --- AIDE (file integrity) ---
+- name: Create AIDE reports dir
+  file:
+    path: /var/reports/aide
+    state: directory
+    mode: '0755'
+  tags: [security_baseline]
+
+- name: Initialize AIDE database if not present
+  command: /usr/sbin/aide --init
+  args: { creates: /var/lib/aide/aide.db.gz }
+  tags: [security_baseline]
+
+- name: Move initial AIDE DB into place (first run only)
+  command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+  args: { removes: /var/lib/aide/aide.db.new.gz }
+  tags: [security_baseline]
+
+- name: Install daily AIDE check (cron.daily)
+  copy:
+    dest: /etc/cron.daily/aide-check
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      TS=$(date +%F_%H-%M)
+      OUT="/var/reports/aide/aide_${TS}.txt"
+      /usr/sbin/aide --check > "$OUT" 2>&1
+  tags: [security_baseline]
+
+# --- Audit rules (useful baseline) ---
+- name: Baseline audit rules
+  copy:
+    dest: /etc/audit/rules.d/20-hardening.rules
+    mode: '0640'
+    content: |
+      ## Time change
+      -a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time-change
+      -w /etc/localtime -p wa -k time-change
+
+      ## Identity changes
+      -w /etc/group -p wa -k identity
+      -w /etc/passwd -p wa -k identity
+      -w /etc/gshadow -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+      -w /etc/security/opasswd -p wa -k identity
+
+      ## Login events
+      -w /var/log/lastlog -p wa -k logins
+      -w /var/run/faillock/ -p wa -k logins
+
+      ## Privileged commands
+      -a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k privileged
+      -w /etc/sudoers -p wa -k scope
+      -w /etc/sudoers.d/ -p wa -k scope
+
+      ## Module loading
+      -w /sbin/insmod -p x -k modules
+      -w /sbin/rmmod  -p x -k modules
+      -w /sbin/modprobe -p x -k modules
+
+      ## Immutable (enable later after tuning)
+      # -e 2
+  notify: Reload audit rules
+  tags: [security_baseline]
+
+- name: Ensure core services enabled and started
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop: [rsyslog, auditd, chronyd, sshd]
+  tags: [security_baseline]

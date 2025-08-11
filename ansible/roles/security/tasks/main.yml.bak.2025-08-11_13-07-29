@@ -1,0 +1,57 @@
+---
+- name: Install UFW, AIDE, and Auditd on Debian/Ubuntu
+  apt:
+    name:
+      - ufw
+      - aide
+      - auditd
+    state: present
+    update_cache: true
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Install AIDE and Auditd on RedHat
+  yum:
+    name:
+      - aide
+      - audit
+    state: present
+  when: ansible_os_family == "RedHat"
+  become: true
+
+- name: Enable and start auditd
+  service:
+    name: auditd
+    state: started
+    enabled: true
+  when: ansible_os_family in ["RedHat", "Debian"]
+  become: true
+
+- name: Enable and start UFW (Debian only)
+  service:
+    name: ufw
+    state: started
+    enabled: true
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Copy aide.conf for Debian
+  copy:
+    src: aide.conf.debian
+    dest: /etc/aide/aide.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == "Debian"
+  become: true
+
+- name: Copy aide.conf for RedHat
+  copy:
+    src: aide.conf.redhat
+    dest: /etc/aide.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == "RedHat"
+  become: true
+
