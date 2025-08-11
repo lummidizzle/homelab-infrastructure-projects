@@ -1,0 +1,147 @@
+---
+# playbooks/bastion.yml
+- name: Bastion hardening (Ubuntu)
+  hosts: staging
+  become: true
+  gather_facts: yes
+
+  vars:
+    syslog_host: "syslog.corp.local"
+
+  handlers:
+    - name: Restart ssh
+      service:
+        name: ssh
+        state: restarted
+    - name: Restart rsyslog
+      service:
+        name: rsyslog
+        state: restarted
+    - name: Reload ufw
+      command: ufw reload
+
+  tasks:
+    # --- Packages ---
+    - name: Ensure base packages are present
+      apt:
+        name:
+          - fail2ban
+          - auditd
+          - rsyslog
+          - ufw
+        state: present
+        update_cache: yes
+
+    # --- Backups before edits ---
+    - name: Backup sshd_config
+      copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config.pre-bastion-{{ ansible_date_time.iso8601 }}
+        remote_src: yes
+        mode: '0644'
+
+    - name: Backup PAM sshd
+      copy:
+        src: /etc/pam.d/sshd
+        dest: /etc/pam.d/sshd.pre-bastion-{{ ansible_date_time.iso8601 }}
+        remote_src: yes
+        mode: '0644'
+
+    # --- SSH hardening ---
+    - name: Enforce SSH (keys only, no root)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?\s*{{ item.key }}\b.*'
+        line: "{{ item.key }} {{ item.value }}"
+        backup: yes
+      loop:
+        - { key: 'PasswordAuthentication', value: 'no' }
+        - { key: 'PermitRootLogin',      value: 'no' }
+        - { key: 'UsePAM',               value: 'yes' }
+      notify: Restart ssh
+
+    # --- Session / keystroke logging (auditd) ---
+    - name: Enable keystroke/session logging via pam_tty_audit
+      lineinfile:
+        path: /etc/pam.d/sshd
+        insertafter: '^# PAM configuration for the Secure Shell service'
+        line: 'session required pam_tty_audit.so enable=*'
+        backup: yes
+      notify: Restart ssh
+
+    # --- Journald limits (drop-in, no overwrite of main file) ---
+    - name: Ensure journald drop-in directory exists
+      file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Limit journald size (drop-in)
+      copy:
+        dest: /etc/systemd/journald.conf.d/size.conf
+        mode: '0644'
+        content: |
+          [Journal]
+          Storage=persistent
+          SystemMaxUse=300M
+          RuntimeMaxUse=100M
+
+    - name: Restart journald to apply limits
+      service:
+        name: systemd-journald
+        state: restarted
+
+    # --- Rsyslog forwarding with durable queue ---
+    - name: Configure rsyslog forward with durable queue
+      copy:
+        dest: /etc/rsyslog.d/99-forward.conf
+        mode: '0644'
+        content: |
+          # forward everything
+          *.* @@{{ syslog_host }}:514
+          # reliable queue action
+          action(type="omfwd" target="{{ syslog_host }}" port="514" protocol="tcp"
+                 queue.type="LinkedList"
+                 queue.filename="fwdRule1"
+                 queue.maxdiskspace="200m"
+                 queue.saveonshutdown="on"
+                 action.resumeRetryCount="-1"
+                 action.resumeInterval="10")
+      notify: Restart rsyslog
+
+    # --- Fail2ban minimal config ---
+    - name: Minimal fail2ban jail for sshd
+      copy:
+        dest: /etc/fail2ban/jail.d/sshd.local
+        mode: '0644'
+        content: |
+          [sshd]
+          enabled = true
+
+    # --- UFW (firewall) ---
+    - name: Allow OpenSSH in UFW
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Ensure UFW enabled
+      ufw:
+        state: enabled
+      notify: Reload ufw
+
+    # --- Services ---
+    - name: Ensure rsyslog & auditd are enabled and started
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - rsyslog
+        - auditd
+
+    - name: Ensure fail2ban is enabled and started
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
+

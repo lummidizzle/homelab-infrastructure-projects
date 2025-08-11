@@ -28,12 +28,12 @@ devops.corp.local
 [security]
 security.corp.local
 
-[ubuntu-servers]
+[ubuntu_servers]
 syslog.corp.local
 glpi.corp.local
 staging.corp.local
 
-[rhel-servers]
+[rhel_servers]
 ansible.corp.local
 reposync.corp.local
 dns-nfs.corp.local
