@@ -1,0 +1,72 @@
+# Operation Repo Storm — CRB Siege
+_“Syncing is easy,” they said. “Just run the command,” they said._
+
+**Date Range:** Aug 8–9, 2025 (America/Chicago)  
+**Host:** `reposync` (CentOS Stream 9)  
+**Storage:** HP2 mount at `/mnt/hp2-repo/central-repo/`  
+**Goal:** Mirror **CRB** locally alongside BaseOS/AppStream and serve via HTTP.
+
+---
+
+## 🧭 Mission Brief
+BaseOS + AppStream synced fine. CRB showed up like a miniboss: slow mirrors, HTTP/2 resets, and multi-GB blobs (dotnet/java *fastdebug*). This diary preserves the scars, so future-you doesn’t repeat the pain.
+
+---
+
+## 🗺️ Terrain & Layout
+- Local mirror root:  
+  - BaseOS: `/mnt/hp2-repo/central-repo/baseos/`  
+  - AppStream: `/mnt/hp2-repo/central-repo/appstream/`  
+  - CRB: `/mnt/hp2-repo/central-repo/crb/`
+- Served via Apache: `http://reposync.corp.local/centos-stream/9/{baseos,appstream,crb}/`
+- Client repo files: `local-*.repo` pointing at the above.
+
+---
+
+## ⏱ Timeline (highlights)
+**Aug 8, ~5:00 PM** – First CRB attempts via `reposync`; speeds in the **kB/s** range.  
+**~8:00 PM** – Stalls around *267/2336*; next package a giant dotnet artifact; mirror flakey.  
+**Night** – Multiple retries; progress crawls.  
+**Aug 9, morning** – Box reboots; resume attempts; same choke point.  
+**Later** – Strategy shift: exclude dotnet family, switch mirrors, or use HTTP (no HTTP/2 resets), try `lftp` and rsync (873 blocked/restricted).  
+**Outcome** – Usable CRB achieved by **excluding problem families**, resuming, and rebuilding metadata. Nightly job updated to avoid stalls.
+
+---
+
+## 🧪 What Actually Worked
+- **Foreground resume runs** (so you can watch):  
+  - `--setopt=keepcache=1` and **no `--delete`** during resume attempts.  
+  - `--exclude=dotnet*` (and optionally `java*-fastdebug*`, `*debuginfo*`, `*debugsource*`, `*src*.rpm`) to bypass choke points.  
+  - Switch to **HTTP** official mirror for stability:
+    - `http://mirror.stream.centos.org/9-stream/CRB/x86_64/os/`
+- After bulk completes, **`createrepo_c`** to refresh metadata.
+
+---
+
+## 🧨 Failure Modes (captured)
+- **Curl 28/55/56**: timeouts, broken pipe, HTTP/2 stream resets on huge RPMs.
+- **Stuck at (267/2336)**: next file enormous `dotnet-sdk-6.0-source-built-artifacts-…rpm`.
+- **DNF lock**: “Waiting for process with pid …” (reposync/other dnf in background).
+- **rsync dead end**: 873/tcp blocked; `rsync.stream.centos.org` restricted to tier mirrors.
+
+---
+
+## 🛠 Playbooks (what we ran)
+See [`commands.md`](./commands.md) for exact, copy-pastable commands:
+- Clean resume with excludes (foreground with logging).
+- HTTP mirror fallback (no TLS/HTTP2 drama).
+- `lftp mirror` method (resumable over HTTP when rsync is blocked).
+- Apache vhost snippet (modern 2.4, `Require all granted`).
+- Nightly cron script (skip dotnet for now so cron doesn’t hang).
+
+---
+
+## 📚 Lessons Learned
+- **Mirror choice matters.** Kernel.org path didn’t host CRB; Berkeley fast but flaky for huge TLS blobs; official HTTP mirror was stable.
+- **Exclude early, backfill later.** Ship a usable repo now; fetch dotnet/fastdebug later via `curl -C -` or a patient run.
+- **Resume safely.** `--setopt=keepcache=1` + drop `--delete` while resuming to avoid thrashing.
+- **Only x86_64.** Always pass `--arch=x86_64` (we learned this the hard way).
+- **Log everything.** Foreground + `tee` keeps you sane.
+
+## “Not all heroes wear capes. Some watch `tail -f` at 2AM.”
+
