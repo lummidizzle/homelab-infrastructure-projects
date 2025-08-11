@@ -1,5 +1,3 @@
-# ubuntu-lite
-Documentation for ubuntu-lite component.
 
 # Staging Server (Bastion / Jump Host)
 
