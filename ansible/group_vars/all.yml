@@ -1,2 +1,6 @@
 install_epel: false
 
+
+# admin user + pubkey path (controller-side)
+admin_user: oluadmin
+admin_pubkey_path: "~/.ssh/id_ed25519.pub"

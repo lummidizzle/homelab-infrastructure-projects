@@ -1,20 +1,36 @@
 ---
+# roles/user-management/tasks/main.yml
+
 - name: Ensure admin group exists
   ansible.builtin.group:
-    name: admins
+    name: "{{ admin_group | default('admin') }}"
     state: present
+  tags: [usermgmt]
 
 - name: Create admin user
   ansible.builtin.user:
-    name: oluadmin
-    comment: "Olumide Admin"
-    shell: /bin/bash
-    groups: admins
-    append: true
+    name: "{{ admin_user }}"
+    groups: "{{ admin_group | default('admin') }}"
+    append: yes
+    shell: "{{ admin_shell | default('/bin/bash') }}"
+    create_home: yes
     state: present
+  tags: [usermgmt]
 
-- name: Set authorized key for oluadmin
+- name: Ensure .ssh directory exists with correct perms
+  ansible.builtin.file:
+    path: "/home/{{ admin_user }}/.ssh"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_group | default('admin') }}"
+    mode: "0700"
+  tags: [usermgmt]
+
+- name: Set authorized key for {{ admin_user }}
   ansible.posix.authorized_key:
-    user: oluadmin
+    user: "{{ admin_user }}"
     state: present
-    key: "{{ lookup('file', 'files/oluadmin_id_rsa.pub') }}"
+    key: "{{ lookup('file', admin_pubkey_path) }}"
+    manage_dir: false
+  tags: [usermgmt]
+
