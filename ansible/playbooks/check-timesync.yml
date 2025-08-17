@@ -1,0 +1,127 @@
+---
+# check-timesync.yml
+# Audit time sync across all hosts and confirm they use your DC.
+
+- name: Check time synchronization across fleet
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    dc_time_server_ip: "192.168.1.137"
+    dc_time_hostnames:
+      - "ws2022-dc.corp.local"
+      - "corp.local"
+
+  tasks:
+    - name: Detect time-sync client (chrony, ntpd, timesyncd)
+      block:
+        - name: Check for chronyc
+          ansible.builtin.stat:
+            path: /usr/bin/chronyc
+          register: p_chronyc
+        - name: Check for ntpq
+          ansible.builtin.stat:
+            path: /usr/bin/ntpq
+          register: p_ntpq
+        - name: Check for systemd-timesyncd unit
+          ansible.builtin.stat:
+            path: /lib/systemd/system/systemd-timesyncd.service
+          register: p_timesyncd
+        - name: Set detected client
+          ansible.builtin.set_fact:
+            timesync_client: >-
+              {{ 'chrony' if p_chronyc.stat.exists else
+                 'ntpd' if p_ntpq.stat.exists else
+                 'timesyncd' if p_timesyncd.stat.exists else
+                 'unknown' }}
+
+    - name: timedatectl status
+      ansible.builtin.command: timedatectl status
+      register: r_timedatectl
+      changed_when: false
+      failed_when: false
+
+    # ------------- chrony -------------
+    - name: chrony | tracking
+      ansible.builtin.command: chronyc tracking
+      register: r_chrony_tracking
+      changed_when: false
+      failed_when: false
+      when: timesync_client == 'chrony'
+
+    - name: chrony | sources -v -n (numeric)
+      ansible.builtin.command: chronyc sources -v -n
+      register: r_chrony_sources
+      changed_when: false
+      failed_when: false
+      when: timesync_client == 'chrony'
+
+    # -------------- ntpd --------------
+    - name: ntpd | peers
+      ansible.builtin.command: ntpq -p
+      register: r_ntpq_peers
+      changed_when: false
+      failed_when: false
+      when: timesync_client == 'ntpd'
+
+    # ------- systemd-timesyncd -------
+    - name: timesyncd | show status
+      ansible.builtin.command: timedatectl show-timesync --all
+      register: r_timesyncd_show
+      changed_when: false
+      failed_when: false
+      when: timesync_client == 'timesyncd'
+
+    # -------- Build haystack text safely --------
+    - name: Build combined status text (haystack)
+      ansible.builtin.set_fact:
+        haystack: >-
+          {{
+            (r_chrony_sources.stdout | default('')) ~ ' ' ~
+            (r_chrony_tracking.stdout | default('')) ~ ' ' ~
+            (r_ntpq_peers.stdout | default('')) ~ ' ' ~
+            (r_timesyncd_show.stdout | default('')) ~ ' ' ~
+            (r_timedatectl.stdout | default(''))
+          }}
+
+    # -------- Safe search: escape tokens before regex search --------
+    - name: Decide if host is synced to DC (IP or hostname)
+      ansible.builtin.set_fact:
+        syncing_to_dc: >-
+          {{
+            (haystack is search(dc_time_server_ip | regex_escape))
+            or
+            (dc_time_hostnames | map('regex_escape') | select('search', haystack) | list | length > 0)
+          }}
+
+    - name: Summarize per-host time-sync health
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }} ({{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }})"
+          - "Client: {{ timesync_client }}"
+          - "Synced-to-DC({{ dc_time_server_ip }}): {{ 'YES' if syncing_to_dc else 'NO' }}"
+          - "Key hints:"
+          - >-
+            {{
+              (r_chrony_sources.stdout if timesync_client == 'chrony' else
+               r_ntpq_peers.stdout if timesync_client == 'ntpd' else
+               r_timesyncd_show.stdout if timesync_client == 'timesyncd' else
+               r_timedatectl.stdout) | default('') | regex_replace('\n+','\n')
+            }}
+      changed_when: false
+
+    - name: Write /tmp/time-sync-report.txt on each host
+      ansible.builtin.copy:
+        dest: /tmp/time-sync-report.txt
+        mode: '0644'
+        content: |
+          CLIENT={{ timesync_client }}
+          HAYSTACK={{ haystack }}
+          SOURCES={{ r_chrony_sources.stdout | default('') }}
+          TRACKING={{ r_chrony_tracking.stdout | default('') }}
+          NTPQ={{ r_ntpq_peers.stdout | default('') }}
+          TIMESYNCD={{ r_timesyncd_show.stdout | default('') }}
+          TIMEDATECTL={{ r_timedatectl.stdout | default('') }}
+      changed_when: false
+

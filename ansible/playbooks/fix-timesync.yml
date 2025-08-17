@@ -1,0 +1,170 @@
+---
+# fix-timesync.yml
+# Enforce chrony to sync to your WS2022-DC for all Linux hosts.
+
+- name: Configure chrony to sync with WS2022-DC
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    dc_ip: "192.168.1.137"
+
+  tasks:
+    # -------- Detect if chrony is already installed (avoid repo hits if it is) --------
+    - name: Check if chrony present (RHEL-family)
+      ansible.builtin.command: rpm -q chrony
+      register: r_rpm
+      failed_when: false
+      changed_when: false
+      when: ansible_os_family == "RedHat"
+
+    - name: Check if chrony present (Debian-family)
+      ansible.builtin.command: dpkg -s chrony
+      register: r_dpkg
+      failed_when: false
+      changed_when: false
+      when: ansible_os_family == "Debian"
+
+    - name: Set chrony_present fact
+      ansible.builtin.set_fact:
+        chrony_present: >-
+          {{
+            (ansible_os_family == 'RedHat' and r_rpm.rc == 0) or
+            (ansible_os_family == 'Debian' and r_dpkg.rc == 0)
+          }}
+
+    # ------------------- Install chrony only if missing (graceful) -------------------
+    - name: Install chrony (RHEL-family, only if missing)
+      ansible.builtin.yum:
+        name: chrony
+        state: present
+      register: r_install_yum
+      failed_when: false
+      when:
+        - ansible_os_family == "RedHat"
+        - not chrony_present
+
+    - name: Install chrony (Debian-family, only if missing)
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+        update_cache: yes
+      register: r_install_apt
+      failed_when: false
+      when:
+        - ansible_os_family == "Debian"
+        - not chrony_present
+
+    - name: Compute install_ok fact
+      ansible.builtin.set_fact:
+        install_ok: >-
+          {{
+            chrony_present or
+            (r_install_yum is defined and r_install_yum.rc is defined and r_install_yum.rc == 0) or
+            (r_install_apt is defined and r_install_apt.rc is defined and r_install_apt.rc == 0)
+          }}
+
+    # ---------------- Debian/Ubuntu cleanup to avoid stray pools ----------------
+    - name: Disable systemd-timesyncd (Debian-family)
+      ansible.builtin.service:
+        name: systemd-timesyncd
+        state: stopped
+        enabled: false
+      when:
+        - ansible_os_family == "Debian"
+        - install_ok
+      ignore_errors: true
+
+    - name: Remove /etc/chrony/sources.d (Debian-family includes)
+      ansible.builtin.file:
+        path: /etc/chrony/sources.d
+        state: absent
+      when:
+        - ansible_os_family == "Debian"
+        - install_ok
+
+    # ----------------------- Backup existing configs -----------------------
+    - name: Backup chrony.conf (RHEL path)
+      ansible.builtin.copy:
+        src: /etc/chrony.conf
+        dest: /etc/chrony.conf.bak
+        remote_src: true
+      when:
+        - ansible_os_family == "RedHat"
+        - install_ok
+      ignore_errors: true
+
+    - name: Backup chrony.conf (Debian path)
+      ansible.builtin.copy:
+        src: /etc/chrony/chrony.conf
+        dest: /etc/chrony/chrony.conf.bak
+        remote_src: true
+      when:
+        - ansible_os_family == "Debian"
+        - install_ok
+      ignore_errors: true
+
+    # ----------------------- Write clean configs -----------------------
+    - name: Configure chrony (RHEL-family)
+      ansible.builtin.copy:
+        dest: /etc/chrony.conf
+        mode: '0644'
+        content: |
+          # Managed by Ansible - WS2022-DC only
+          server {{ dc_ip }} iburst
+          driftfile /var/lib/chrony/drift
+          makestep 1.0 3
+          rtcsync
+          logdir /var/log/chrony
+      when:
+        - ansible_os_family == "RedHat"
+        - install_ok
+
+    - name: Configure chrony (Debian-family)
+      ansible.builtin.copy:
+        dest: /etc/chrony/chrony.conf
+        mode: '0644'
+        content: |
+          # Managed by Ansible - WS2022-DC only
+          server {{ dc_ip }} iburst
+          driftfile /var/lib/chrony/chrony.drift
+          makestep 1.0 3
+          rtcsync
+          logdir /var/log/chrony
+      when:
+        - ansible_os_family == "Debian"
+        - install_ok
+
+    # ----------------------- Restart & step time -----------------------
+    - name: Restart chrony
+      ansible.builtin.service:
+        name: "{{ 'chronyd' if ansible_os_family == 'RedHat' else 'chrony' }}"
+        state: restarted
+        enabled: true
+      when: install_ok
+
+    - name: Force immediate step
+      ansible.builtin.command: chronyc -a makestep
+      changed_when: false
+      ignore_errors: true
+      when: install_ok
+
+    # ----------------------- Verify & summarize -----------------------
+    - name: Show chrony sources (-n for numeric)
+      ansible.builtin.command: chronyc sources -v -n
+      register: chrony_sources
+      changed_when: false
+      failed_when: false
+      when: install_ok
+
+    - name: Summarize enforcement result
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "chrony_present: {{ chrony_present }}"
+          - "install_ok: {{ install_ok }}"
+          - "note: if install_ok is false, fix repos before retrying."
+          - "sources (if available):"
+          - "{{ chrony_sources.stdout | default('n/a') }}"
+
