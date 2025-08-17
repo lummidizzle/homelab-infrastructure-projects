@@ -1,0 +1,2 @@
+# Default profile for this group (RHEL/Rocky 9 using your local mirror)
+repo_profile: rhel_9
