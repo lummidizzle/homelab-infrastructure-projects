@@ -1,6 +1,21 @@
+# Global vars for patching from local mirror
+
+# Your mirror host
+repo_host: reposync.corp.local
+mirror_root: "http://{{ repo_host }}"
+
+# Canonical CentOS Stream 9 endpoints (we standardized on these)
+cs9_baseos:    "{{ mirror_root }}/centos-stream/9/baseos/"
+cs9_appstream: "{{ mirror_root }}/centos-stream/9/appstream/"
+cs9_crb:       "{{ mirror_root }}/centos-stream/9/crb/"
+
+# We aren’t installing EPEL here
 install_epel: false
 
-
-# admin user + pubkey path (controller-side)
+# Admin info you already had
 admin_user: oluadmin
 admin_pubkey_path: "~/.ssh/id_ed25519.pub"
+
+# Use upgrade instead of distro-sync to avoid downgrades/erasures of protected pkgs
+use_distro_sync: false
+

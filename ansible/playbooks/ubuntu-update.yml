@@ -1,18 +1,20 @@
 ---
-- name: Update Ubuntu servers weekly
-  hosts:
-    - glpi.corp.local
-    - syslog.corp.local
-    - staging.corp.local
+- name: Ubuntu weekly updates + baseline security
+  hosts: ubuntu_servers
   become: true
 
-  tasks:
-    - name: Update APT cache
+  vars:
+    aide_db_path: /var/lib/aide/aide.db
+    aide_db_new: /var/lib/aide/aide.db.new
+
+  pre_tasks:
+    - name: Update APT cache (1 day valid)
       ansible.builtin.apt:
         update_cache: yes
         cache_valid_time: 86400
 
-    - name: Upgrade all packages
+  tasks:
+    - name: Upgrade all packages to latest (dist-upgrade)
       ansible.builtin.apt:
         upgrade: dist
         autoremove: yes
@@ -21,16 +23,35 @@
     - name: Ensure security packages are installed
       ansible.builtin.apt:
         name:
+          - ufw
           - auditd
           - aide
-          - ufw
         state: present
 
-    - name: Allow SSH through UFW
-      ansible.builtin.command: ufw allow OpenSSH
-      when: ansible_facts['distribution'] == "Ubuntu"
+    - name: Allow OpenSSH through UFW
+      community.general.ufw:
+        rule: allow
+        name: OpenSSH
 
-    - name: Enable UFW (forcefully)
-      ansible.builtin.command: ufw --force enable
-      when: ansible_facts['distribution'] == "Ubuntu"
+    - name: Enable and enforce UFW (default deny)
+      community.general.ufw:
+        state: enabled
+        policy: deny
+
+    - name: Enable + start auditd
+      ansible.builtin.service:
+        name: auditd
+        state: started
+        enabled: yes
+
+    - name: Initialize AIDE database if missing (first run)
+      ansible.builtin.command: /usr/sbin/aideinit
+      args:
+        creates: "{{ aide_db_new }}"
+      notify: Replace AIDE database
+
+  handlers:
+    - name: Replace AIDE database
+      ansible.builtin.command: mv "{{ aide_db_new }}" "{{ aide_db_path }}"
+      when: aide_db_new is exists
 

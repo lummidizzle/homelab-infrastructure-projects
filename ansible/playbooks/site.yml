@@ -1,20 +1,93 @@
 ---
-- name: Apply base configuration to all servers
+# ===============================
+# Global Site Playbook (site.yml)
+# ===============================
+# This file drives all automation across your homelab:
+# - Repo enforcement (RHEL/CentOS only)
+# - Common setup (base configs, sudoers, etc.)
+# - Security hardening (UFW, auditd, AIDE, ClamAV/rkhunter on security.corp.local)
+# - Monitoring (Nagios Core on monitoring.corp.local)
+# - Backup automation (rsync, logrotate, cron jobs)
+# ===============================
+
+# -------------------------------
+# 1. Enforce ONLY local repos
+# -------------------------------
+- name: Enforce ONLY local repos on RedHat-like servers
+  hosts: redhat_like
+  become: yes
+  gather_facts: false
+  vars:
+    # <<< Update these if your repo IDs differ >>>
+    local_repo_ids:
+      - baseos-local
+      - appstream-local
+      - crb-local
+
+  tasks:
+    - name: Ensure dnf-plugins-core is installed (for config-manager)
+      ansible.builtin.package:
+        name: dnf-plugins-core
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Disable ALL repos
+      ansible.builtin.shell: "dnf config-manager --set-disabled '*'"
+      args:
+        warn: false
+      register: disable_all_repos
+      changed_when: "'Nothing to do' not in disable_all_repos.stdout + disable_all_repos.stderr"
+      when: ansible_os_family == "RedHat"
+
+    - name: Enable ONLY local repos
+      ansible.builtin.command: >
+        dnf config-manager --set-enabled {{ local_repo_ids | join(' ') }}
+      register: enable_local_repos
+      changed_when: "'Nothing to do' not in enable_local_repos.stdout + enable_local_repos.stderr"
+      when: ansible_os_family == "RedHat"
+
+    - name: Clean DNF metadata
+      ansible.builtin.command: dnf clean all
+      when: ansible_os_family == "RedHat"
+
+    - name: Rebuild cache against ONLY our local repos
+      ansible.builtin.command: >
+        dnf --disablerepo='*' --enablerepo='{{ local_repo_ids | join(",") }}' makecache
+      when: ansible_os_family == "RedHat"
+
+# -------------------------------
+# 2. Common Setup
+# -------------------------------
+- name: Apply common configuration to all servers
   hosts: all
-  become: true
-  become_method: ansible.builtin.sudo
+  become: yes
   roles:
     - common
-    - user-management
 
-- name: Apply monitoring configuration
+# -------------------------------
+# 3. Security Hardening
+# -------------------------------
+- name: Apply security hardening
+  hosts: all
+  become: yes
+  roles:
+    - security
+
+# -------------------------------
+# 4. Monitoring (Nagios Core)
+# -------------------------------
+- name: Configure monitoring server
   hosts: monitoring
-  become: true
+  become: yes
   roles:
     - monitoring
 
-- name: Apply backup configuration
+# -------------------------------
+# 5. Backup Server
+# -------------------------------
+- name: Configure backup automation
   hosts: backup
-  become: true
+  become: yes
   roles:
     - backup
+
