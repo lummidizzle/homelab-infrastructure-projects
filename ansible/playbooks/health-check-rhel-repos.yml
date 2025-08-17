@@ -1,0 +1,23 @@
+---
+- name: Health check — RHEL hosts can reach local repos
+  hosts: rhel_servers
+  become: false
+  gather_facts: false
+
+  vars:
+    repo_host: reposync.corp.local
+    repo_urls:
+      - "http://{{ repo_host }}/centos-stream/9/baseos/repodata/repomd.xml"
+      - "http://{{ repo_host }}/centos-stream/9/appstream/repodata/repomd.xml"
+      - "http://{{ repo_host }}/centos-stream/9/crb/repodata/repomd.xml"
+
+  tasks:
+    - name: Check each repo URL (HTTP 200)
+      ansible.builtin.uri:
+        url: "{{ item }}"
+        method: GET
+        status_code: 200
+        return_content: false
+        timeout: 5
+      loop: "{{ repo_urls }}"
+

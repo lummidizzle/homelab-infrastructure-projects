@@ -1,0 +1,168 @@
+---
+# Play 1: Repo host — publish clean URLs via Apache Alias
+- name: Publish local mirrors with stable URLs
+  hosts: repos
+  become: true
+  vars:
+    web_root: /var/www/html/centos-stream/9
+    guess_baseos: "{{ web_root }}/cs9-baseos-upstream"
+    guess_appstream: "{{ web_root }}/cs9-appstream-upstream"
+    guess_crb: "{{ web_root }}/cs9-crb-upstream"
+  tasks:
+    - name: Install Apache + tools
+      ansible.builtin.package:
+        name:
+          - httpd
+          - policycoreutils-python-utils
+        state: present
+
+    - name: Ensure web root exists
+      ansible.builtin.file:
+        path: "{{ web_root }}"
+        state: directory
+        mode: "0755"
+
+    # Detect the real folders; fall back to guesses
+    - name: Detect BaseOS folder
+      ansible.builtin.find:
+        paths: "{{ web_root }}"
+        patterns: "*baseos*/repodata"
+        file_type: directory
+        recurse: true
+      register: baseos_hits
+
+    - name: Detect AppStream folder
+      ansible.builtin.find:
+        paths: "{{ web_root }}"
+        patterns: "*appstream*/repodata"
+        file_type: directory
+        recurse: true
+      register: appstream_hits
+
+    - name: Detect CRB folder
+      ansible.builtin.find:
+        paths: "{{ web_root }}"
+        patterns: "*crb*/repodata"
+        file_type: directory
+        recurse: true
+      register: crb_hits
+
+    - name: Set real repo roots (strip /repodata)
+      ansible.builtin.set_fact:
+        baseos_real: "{{ (baseos_hits.files | map(attribute='path') | list | first | dirname) | default(guess_baseos, true) }}"
+        appstream_real: "{{ (appstream_hits.files | map(attribute='path') | list | first | dirname) | default(guess_appstream, true) }}"
+        crb_real: "{{ (crb_hits.files | map(attribute='path') | list | first | dirname) | default(guess_crb, true) }}"
+
+    - name: Create Apache alias config
+      ansible.builtin.copy:
+        dest: /etc/httpd/conf.d/local-repos.conf
+        mode: "0644"
+        content: |
+          # Clean URLs for local mirrors
+          Alias /centos-stream/9/baseos    "{{ baseos_real }}"
+          Alias /centos-stream/9/appstream "{{ appstream_real }}"
+          Alias /centos-stream/9/crb       "{{ crb_real }}"
+
+          <Directory "{{ web_root }}">
+              Options Indexes FollowSymLinks
+              AllowOverride None
+              Require all granted
+          </Directory>
+
+    - name: Restore SELinux contexts on web root
+      ansible.builtin.command: restorecon -RF {{ web_root }}
+      changed_when: false
+      failed_when: false
+
+    - name: Allow httpd to read user content (SELinux)
+      ansible.builtin.command: setsebool -P httpd_read_user_content on
+      changed_when: false
+      failed_when: false
+
+    - name: Open firewall for HTTP
+      ansible.builtin.command: firewall-cmd --add-service=http --permanent
+      changed_when: false
+      failed_when: false
+
+    - name: Reload firewall
+      ansible.builtin.command: firewall-cmd --reload
+      changed_when: false
+      failed_when: false
+
+    - name: Restart + enable Apache
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+        enabled: yes
+
+    - name: Health check BaseOS/AppStream/CRB URLs (HTTP 200)
+      ansible.builtin.uri:
+        url: "http://{{ inventory_hostname }}/centos-stream/9/{{ item }}/repodata/repomd.xml"
+        method: GET
+        status_code: 200
+        return_content: false
+        timeout: 5
+      loop:
+        - baseos
+        - appstream
+        - crb
+
+# Play 2: RHEL clients — point DNF to the clean URLs and refresh
+- name: Configure RHEL clients to use local mirror only
+  hosts: rhel_servers
+  become: true
+  vars:
+    repo_host: reposync.corp.local
+    repo_root: "http://{{ repo_host }}/centos-stream/9"
+  tasks:
+    - name: Configure BaseOS local repo
+      ansible.builtin.yum_repository:
+        name: baseos-local
+        description: Local BaseOS (HTTP)
+        baseurl: "{{ repo_root }}/baseos"
+        enabled: yes
+        gpgcheck: no
+        mirrorlist: ""
+        metalink: ""
+
+    - name: Configure AppStream local repo
+      ansible.builtin.yum_repository:
+        name: appstream-local
+        description: Local AppStream (HTTP)
+        baseurl: "{{ repo_root }}/appstream"
+        enabled: yes
+        gpgcheck: no
+        mirrorlist: ""
+        metalink: ""
+
+    - name: Configure CRB local repo
+      ansible.builtin.yum_repository:
+        name: crb-local
+        description: Local CRB (HTTP)
+        baseurl: "{{ repo_root }}/crb"
+        enabled: yes
+        gpgcheck: no
+        mirrorlist: ""
+        metalink: ""
+
+    - name: Disable all non-local repos
+      ansible.builtin.command: dnf config-manager --set-disabled \*
+      changed_when: false
+
+    - name: Enable only our three local repos
+      ansible.builtin.command: dnf config-manager --set-enabled baseos-local appstream-local crb-local
+      changed_when: false
+
+    - name: Clean DNF cache
+      ansible.builtin.command: dnf clean all
+      changed_when: false
+
+    - name: Rebuild metadata from local repos
+      ansible.builtin.dnf:
+        update_cache: yes
+        disablerepo: "*"
+        enablerepo:
+          - baseos-local
+          - appstream-local
+          - crb-local
+

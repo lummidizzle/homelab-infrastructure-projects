@@ -1,0 +1,115 @@
+- name: Validate and use local Rocky/CentOS Stream mirror
+  hosts: devops
+  become: yes
+  gather_facts: false
+
+  vars:
+    mirror_host: "http://192.168.1.13"     # your reposync/Apache box
+    repo_prefix: "local-mirror"            # label for temp repos
+    baseos_url: "{{ mirror_host }}/baseos/"
+    appstream_url: "{{ mirror_host }}/appstream/"
+    cleanup_repos_after: false             # set true to remove the temp repos at the end
+
+  tasks:
+    - name: Sanity — ensure this playbook has no tabs (YAML hates tabs)
+      local_action:
+        module: command
+        argv: [bash, -lc, "(! grep -nP '\\t' {{ playbook_dir }}/test-rocky-mirror.yml >/dev/null)"]
+      run_once: true
+      changed_when: false
+
+    - name: Check BaseOS repodata is reachable (200 OK)
+      ansible.builtin.uri:
+        url: "{{ baseos_url }}repodata/repomd.xml"
+        method: HEAD
+        status_code: 200
+        return_content: false
+        timeout: 10
+
+    - name: Check AppStream repodata is reachable (200 OK)
+      ansible.builtin.uri:
+        url: "{{ appstream_url }}repodata/repomd.xml"
+        method: HEAD
+        status_code: 200
+        return_content: false
+        timeout: 10
+
+    - name: Create temp repo for BaseOS (points to local mirror)
+      ansible.builtin.yum_repository:
+        name: "{{ repo_prefix }}-baseos"
+        description: "Local mirror - BaseOS"
+        baseurl: "{{ baseos_url }}"
+        enabled: yes
+        gpgcheck: no
+
+    - name: Create temp repo for AppStream (points to local mirror)
+      ansible.builtin.yum_repository:
+        name: "{{ repo_prefix }}-appstream"
+        description: "Local mirror - AppStream"
+        baseurl: "{{ appstream_url }}"
+        enabled: yes
+        gpgcheck: no
+
+    - name: Make cache using only our local mirror repos
+      ansible.builtin.command:
+        cmd: >
+          dnf -y --disablerepo="*"
+          --enablerepo="{{ repo_prefix }}-baseos,{{ repo_prefix }}-appstream"
+          makecache
+      register: makecache_out
+      changed_when: "'Metadata cache created' in makecache_out.stdout or 'Metadata cache created' in makecache_out.stderr"
+
+    - name: Show makecache output (short)
+      ansible.builtin.debug:
+        var: makecache_out.stdout_lines
+
+    - name: repoinfo BaseOS (only our repo)
+      ansible.builtin.command:
+        cmd: >
+          dnf --disablerepo="*"
+          --enablerepo="{{ repo_prefix }}-baseos"
+          repoinfo
+      register: baseos_info
+      changed_when: false
+
+    - name: repoinfo AppStream (only our repo)
+      ansible.builtin.command:
+        cmd: >
+          dnf --disablerepo="*"
+          --enablerepo="{{ repo_prefix }}-appstream"
+          repoinfo
+      register: appstream_info
+      changed_when: false
+
+    # ---- robust asserts: trust repoinfo return codes ----
+    - name: Fail if BaseOS repo is not healthy
+      ansible.builtin.assert:
+        that:
+          - baseos_info.rc == 0
+        fail_msg: "BaseOS repo invalid. repoinfo stderr: {{ baseos_info.stderr | truncate(400) }}"
+
+    - name: Fail if AppStream repo is not healthy
+      ansible.builtin.assert:
+        that:
+          - appstream_info.rc == 0
+        fail_msg: "AppStream repo invalid. repoinfo stderr: {{ appstream_info.stderr | truncate(400) }}"
+
+    - name: Success summary
+      ansible.builtin.debug:
+        msg:
+          - "Mirror looks good ✅"
+          - "BaseOS:    {{ baseos_url }}"
+          - "AppStream: {{ appstream_url }}"
+
+    - name: (Optional) Remove temp repos after validation
+      when: cleanup_repos_after | bool
+      block:
+        - name: Remove temp BaseOS repo
+          ansible.builtin.yum_repository:
+            name: "{{ repo_prefix }}-baseos"
+            state: absent
+        - name: Remove temp AppStream repo
+          ansible.builtin.yum_repository:
+            name: "{{ repo_prefix }}-appstream"
+            state: absent
+

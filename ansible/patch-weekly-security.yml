@@ -1,0 +1,25 @@
+---
+- name: Weekly security patch | RHEL9 fleet
+  hosts: rhel9_fleet
+  become: true
+  gather_facts: true
+  vars:
+    mode: "security"
+  roles:
+    - patch_std
+
+- name: Weekly security patch | Controller via CDN
+  hosts: controller
+  become: true
+  gather_facts: true
+  vars:
+    mode: "security"
+  pre_tasks:
+    - name: Ensure subscription-manager plugin is enabled
+      lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled='
+        line: 'enabled=1'
+        create: true
+  roles:
+    - patch_std

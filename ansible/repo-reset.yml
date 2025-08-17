@@ -1,0 +1,7 @@
+---
+- name: Reset YUM/DNF to clean local repos (RHEL9/Rocky9)
+  hosts: rhel9_fleet
+  become: true
+  gather_facts: true
+  roles:
+    - repo_reset

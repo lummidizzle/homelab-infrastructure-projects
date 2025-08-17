@@ -1,0 +1,79 @@
+---
+- name: Publish local RHEL repos via Apache Alias + health check
+  hosts: repos
+  become: true
+
+  vars:
+    web_root: /var/www/html/centos-stream/9
+    baseos_real: "{{ web_root }}/cs9-baseos-upstream"
+    appstream_real: "{{ web_root }}/cs9-appstream-upstream"
+    crb_real: "{{ web_root }}/cs9-crb-upstream"
+
+  tasks:
+    - name: Install Apache (httpd) + SELinux helpers
+      ansible.builtin.package:
+        name:
+          - httpd
+          - policycoreutils-python-utils
+        state: present
+
+    - name: Ensure web root exists
+      ansible.builtin.file:
+        path: "{{ web_root }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create Apache alias config
+      ansible.builtin.copy:
+        dest: /etc/httpd/conf.d/local-repos.conf
+        mode: "0644"
+        content: |
+          # Clean URLs for local mirrors
+          Alias /centos-stream/9/baseos    "{{ baseos_real }}"
+          Alias /centos-stream/9/appstream "{{ appstream_real }}"
+          Alias /centos-stream/9/crb       "{{ crb_real }}"
+
+          <Directory "{{ web_root }}">
+              Options Indexes FollowSymLinks
+              AllowOverride None
+              Require all granted
+          </Directory>
+
+    - name: Restore SELinux contexts on web root
+      ansible.builtin.command: restorecon -RF {{ web_root }}
+      changed_when: false
+      failed_when: false
+
+    - name: Allow httpd to read user content (SELinux)
+      ansible.builtin.command: setsebool -P httpd_read_user_content on
+      changed_when: false
+      failed_when: false
+
+    - name: Open firewall for HTTP
+      ansible.builtin.command: firewall-cmd --add-service=http --permanent
+      changed_when: false
+      failed_when: false
+
+    - name: Reload firewall
+      ansible.builtin.command: firewall-cmd --reload
+      changed_when: false
+      failed_when: false
+
+    - name: Enable + reload Apache
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+        enabled: yes
+
+    - name: Health check BaseOS/AppStream/CRB (HTTP 200)
+      ansible.builtin.uri:
+        url: "http://{{ inventory_hostname }}/centos-stream/9/{{ item }}/repodata/repomd.xml"
+        method: GET
+        status_code: 200
+        return_content: false
+        timeout: 5
+      loop:
+        - baseos
+        - appstream
+        - crb
+

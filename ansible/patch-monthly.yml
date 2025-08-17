@@ -1,0 +1,37 @@
+---
+# Fleet (RHEL/Rocky 9) → local mirror
+- name: Monthly full patch | RHEL9 fleet
+  hosts: rhel9_fleet
+  become: true
+  gather_facts: true
+  vars:
+    mode: "full"
+  roles:
+    - patch_std
+
+# Controller (RHEL10) → Red Hat CDN
+- name: Monthly full patch | Controller via CDN
+  hosts: controller
+  become: true
+  gather_facts: true
+  vars:
+    mode: "full"
+  pre_tasks:
+    - name: Ensure subscription-manager plugin is enabled
+      lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled='
+        line: 'enabled=1'
+        create: true
+    - name: Remove any local mirror repo file
+      file:
+        path: /etc/yum.repos.d/yum-local.repo
+        state: absent
+    - name: Make sure CDN repos are on (best-effort)
+      shell: |
+        subscription-manager refresh || true
+        subscription-manager repos --enable=rhel-10-for-x86_64-baseos-rpms || true
+        subscription-manager repos --enable=rhel-10-for-x86_64-appstream-rpms || true
+      args: { executable: /bin/bash }
+  roles:
+    - patch_std

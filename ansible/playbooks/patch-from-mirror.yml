@@ -1,0 +1,112 @@
+---
+# Patch all RHEL-family hosts from your frozen CentOS Stream mirror.
+# No resyncs. Clean caches, remove duplicate repo files, pin to local mirror, patch.
+
+- name: RHEL-family -> clean, pin to mirror, patch
+  hosts: rhel_servers
+  become: true
+  gather_facts: true
+
+  vars:
+    repo_host: reposync.corp.local      # your mirror FQDN/IP
+    baseos_url:    "http://{{ repo_host }}/centos-stream/9/baseos/"
+    appstream_url: "http://{{ repo_host }}/centos-stream/9/appstream/"
+    crb_url:       "http://{{ repo_host }}/centos-stream/9/crb/"
+    enabled_ids:
+      - local-mirror-baseos
+      - local-mirror-appstream
+      - local-mirror-crb
+
+  pre_tasks:
+    - name: Ensure dnf is present
+      package:
+        name: dnf
+        state: present
+
+  tasks:
+    # 1) Clean up any vendor/default repos so we don't get "listed more than once"
+    - name: Remove known vendor/local .repo files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/yum.repos.d/CentOS-*.repo
+        - /etc/yum.repos.d/Rocky-*.repo
+        - /etc/yum.repos.d/redhat.repo
+        - /etc/yum.repos.d/baseos-local.repo
+        - /etc/yum.repos.d/appstream-local.repo
+        - /etc/yum.repos.d/crb-local.repo
+        - /etc/yum.repos.d/local-mirror-*.repo
+      ignore_errors: true
+
+    - name: Disable all repos
+      command: dnf config-manager --set-disabled \*
+      changed_when: false
+
+    # 2) Drop all client-side caches (no SSH hopping)
+    - name: Remove /var/cache/dnf to kill stale metadata
+      file:
+        path: /var/cache/dnf
+        state: absent
+
+    - name: dnf clean all
+      command: dnf clean all
+      changed_when: false
+
+    # 3) Install ONLY our frozen mirror repos
+    - name: Configure local-mirror-baseos
+      yum_repository:
+        name: local-mirror-baseos
+        description: Local Mirror - BaseOS (frozen)
+        baseurl: "{{ baseos_url }}"
+        enabled: yes
+        gpgcheck: no
+
+    - name: Configure local-mirror-appstream
+      yum_repository:
+        name: local-mirror-appstream
+        description: Local Mirror - AppStream (frozen)
+        baseurl: "{{ appstream_url }}"
+        enabled: yes
+        gpgcheck: no
+
+    - name: Configure local-mirror-crb
+      yum_repository:
+        name: local-mirror-crb
+        description: Local Mirror - CRB (frozen)
+        baseurl: "{{ crb_url }}"
+        enabled: yes
+        gpgcheck: no
+
+    - name: Enable only our mirror repos
+      command: >
+        dnf config-manager
+        --set-disabled \*
+        {% for id in enabled_ids %} --set-enabled {{ id }} {% endfor %}
+      changed_when: false
+
+    - name: Rebuild dnf metadata from our mirror
+      dnf:
+        update_cache: yes
+        disablerepo: "*"
+        enablerepo: "{{ enabled_ids }}"
+
+    # 4) Patch with safe flags; retry with core excludes to get past blockers
+    - name: Distro-sync (primary)
+      command: >
+        dnf -y --disablerepo="*" --enablerepo={{ enabled_ids | join(',') }}
+        distro-sync --allowerasing --setopt=install_weak_deps=False --nobest
+      register: ds1
+      changed_when: true
+      failed_when: false
+
+    - name: Distro-sync (retry with excludes for known troublemakers)
+      command: >
+        dnf -y --disablerepo="*" --enablerepo={{ enabled_ids | join(',') }}
+        distro-sync --allowerasing --setopt=install_weak_deps=False --nobest
+        --exclude=kernel* --exclude=systemd* --exclude=dracut* --exclude=grub2* --exclude=samba-common*
+      when: ds1.rc != 0
+      register: ds2
+      changed_when: true
+      failed_when: ds1.rc != 0 and ds2.rc != 0
+

@@ -1,0 +1,36 @@
+---
+- name: Patch the RHEL 10 Ansible controller via Red Hat CDN
+  hosts: controller
+  become: true
+  gather_facts: true
+  vars:
+    rh_baseos: "rhel-10-for-x86_64-baseos-rpms"
+    rh_appstream: "rhel-10-for-x86_64-appstream-rpms"
+  tasks:
+    - name: Ensure subscription-manager plugin is enabled
+      lineinfile:
+        path: /etc/dnf/plugins/subscription-manager.conf
+        regexp: '^enabled='
+        line: 'enabled=1'
+        create: true
+
+    - name: Remove any local mirror repo file
+      file:
+        path: /etc/yum.repos.d/yum-local.repo
+        state: absent
+
+    - name: Refresh RHSM and set repos
+      shell: |
+        set -e
+        subscription-manager refresh
+        subscription-manager repos --disable='*'
+        subscription-manager repos --enable={{ rh_baseos }} || true
+        subscription-manager repos --enable={{ rh_appstream }} || true
+      args: { executable: /bin/bash }
+
+    - name: Clean + makecache
+      shell: dnf clean all && dnf makecache
+      changed_when: false
+
+    - name: Update controller
+      command: dnf -y update

@@ -1,0 +1,120 @@
+---
+- name: Mirror Rocky 9 (resumable) and publish HTTP
+  hosts: repos
+  become: true
+  vars:
+    rocky_root: /var/www/html/rocky/9
+    rocky_repo_file: /etc/yum.repos.d/rocky9-sync.repo
+    rocky_map:
+      - { id: "rocky-baseos",    dst: "baseos",    metalink: "https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=BaseOS-9" }
+      - { id: "rocky-appstream", dst: "appstream", metalink: "https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=AppStream-9" }
+      - { id: "rocky-crb",       dst: "crb",       metalink: "https://mirrors.rockylinux.org/mirrorlist?arch=x86_64&repo=CRB-9" }
+
+  tasks:
+    - name: Ensure tools present
+      package:
+        name:
+          - dnf-plugins-core
+          - createrepo_c
+          - httpd
+        state: present
+
+    - name: Write Rocky 9 sync .repo
+      copy:
+        dest: "{{ rocky_repo_file }}"
+        mode: "0644"
+        content: |
+          [rocky-baseos]
+          name=Rocky 9 - BaseOS
+          metalink={{ rocky_map[0].metalink }}
+          enabled=1
+          gpgcheck=0
+
+          [rocky-appstream]
+          name=Rocky 9 - AppStream
+          metalink={{ rocky_map[1].metalink }}
+          enabled=1
+          gpgcheck=0
+
+          [rocky-crb]
+          name=Rocky 9 - CRB
+          metalink={{ rocky_map[2].metalink }}
+          enabled=1
+          gpgcheck=0
+
+    - name: Ensure mirror directories exist
+      file:
+        path: "{{ rocky_root }}/{{ item.dst }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ rocky_map }}"
+
+    - name: Sync each Rocky repo (resumable, newest-only) — may take a while
+      shell: |
+        set -o pipefail
+        reposync -m --download-metadata --newest-only --arch=x86_64 \
+          --download-path={{ rocky_root }} --repoid={{ item.id }} --delete 2>&1 | tee /var/log/reposync-{{ item.id }}.log
+      args:
+        executable: /bin/bash
+      loop: "{{ rocky_map }}"
+      register: sync_results
+      changed_when: true
+      failed_when: false
+
+    - name: Verify repodata exists after sync
+      stat:
+        path: "{{ rocky_root }}/{{ item.dst }}/repodata/repomd.xml"
+      loop: "{{ rocky_map }}"
+      register: repodata_stats
+
+    - name: Fail if any repo missing repodata (check logs)
+      fail:
+        msg: >
+          Sync incomplete for {{ rocky_map[loop.index0].id }}.
+          See /var/log/reposync-{{ rocky_map[loop.index0].id }}.log
+      when: not repodata_stats.results[loop.index0].stat.exists
+      loop: "{{ rocky_map }}"
+
+    - name: Publish clean Rocky URLs via Apache Alias
+      copy:
+        dest: /etc/httpd/conf.d/rocky-local.conf
+        mode: "0644"
+        content: |
+          Alias /rocky/9/baseos    "{{ rocky_root }}/baseos"
+          Alias /rocky/9/appstream "{{ rocky_root }}/appstream"
+          Alias /rocky/9/crb       "{{ rocky_root }}/crb"
+          <Directory "{{ rocky_root }}">
+            Options Indexes FollowSymLinks
+            Require all granted
+          </Directory>
+
+    - name: SELinux, firewall and httpd
+      block:
+        - command: restorecon -RF {{ rocky_root }}
+          changed_when: false
+        - command: setsebool -P httpd_read_user_content on
+          changed_when: false
+          failed_when: false
+        - command: firewall-cmd --add-service=http --permanent
+          changed_when: false
+          failed_when: false
+        - command: firewall-cmd --reload
+          changed_when: false
+          failed_when: false
+        - service:
+            name: httpd
+            state: restarted
+            enabled: yes
+
+    - name: Health check Rocky URLs (HTTP 200)
+      uri:
+        url: "http://{{ inventory_hostname }}/rocky/9/{{ item }}/repodata/repomd.xml"
+        method: GET
+        status_code: 200
+        return_content: false
+        timeout: 15
+      loop:
+        - baseos
+        - appstream
+        - crb
+
