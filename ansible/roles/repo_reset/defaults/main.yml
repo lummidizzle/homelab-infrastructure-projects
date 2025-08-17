@@ -1,0 +1,29 @@
+repo_profile: rhel_9
+repo_server_host: "reposync.corp.local"
+repo_scheme: "http"
+preflight_check: true
+
+gpgcheck: false
+repo_gpgcheck: false
+gpgkey_urls: []
+
+paths:
+  # RHEL 9 clients use top-level baseos/appstream
+  rhel_9:
+    baseos:     "http://reposync.corp.local/baseos"
+    appstream:  "http://reposync.corp.local/appstream"
+    # CRB is actually cs9-crb-upstream on your server
+    crb:        "http://reposync.corp.local/centos-stream/9/cs9-crb-upstream"
+
+  # You do NOT have RHEL 10 mirrored yet. Leave these unused for now.
+  rhel_10:
+    baseos:     "http://reposync.corp.local/NOT-MIRRORED"
+    appstream:  "http://reposync.corp.local/NOT-MIRRORED"
+    crb:        "http://reposync.corp.local/NOT-MIRRORED"
+
+  # CentOS Stream 9 mirrors (if you have CS9 clients)
+  centos_stream_9:
+    baseos:     "http://reposync.corp.local/centos-stream/9/baseos"
+    appstream:  "http://reposync.corp.local/centos-stream/9/appstream"
+    crb:        "http://reposync.corp.local/centos-stream/9/cs9-crb-upstream"
+

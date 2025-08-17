@@ -1,0 +1,30 @@
+# Managed by Ansible - DO NOT EDIT
+# Profile: {{ repo_profile }}
+
+[baseos-local]
+name=Local BaseOS
+baseurl={{ paths[repo_profile].baseos }}/
+enabled=1
+gpgcheck={{ 1 if gpgcheck else 0 }}
+repo_gpgcheck={{ 1 if repo_gpgcheck else 0 }}
+{% for k in gpgkey_urls %}gpgkey={{ k }}
+{% endfor %}
+
+[appstream-local]
+name=Local AppStream
+baseurl={{ paths[repo_profile].appstream }}/
+enabled=1
+gpgcheck={{ 1 if gpgcheck else 0 }}
+repo_gpgcheck={{ 1 if repo_gpgcheck else 0 }}
+{% for k in gpgkey_urls %}gpgkey={{ k }}
+{% endfor %}
+
+[crb-local]
+name=Local CRB
+baseurl={{ paths[repo_profile].crb }}/
+enabled=1
+gpgcheck={{ 1 if gpgcheck else 0 }}
+repo_gpgcheck={{ 1 if repo_gpgcheck else 0 }}
+{% for k in gpgkey_urls %}gpgkey={{ k }}
+{% endfor %}
+

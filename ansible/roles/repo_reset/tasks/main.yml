@@ -1,0 +1,70 @@
+---
+- name: Preflight | Ensure repo host is reachable (optional)
+  ansible.builtin.uri:
+    url: "{{ repo_scheme }}://{{ repo_server_host }}/"
+    method: GET
+    return_content: false
+    status_code: [200, 301, 302, 403]
+    timeout: 5
+  register: repo_ping
+  failed_when: preflight_check and (repo_ping.status not in [200, 301, 302, 403])
+  when: preflight_check
+
+- name: Create timestamped backup dir
+  ansible.builtin.file:
+    path: "/etc/yum.repos.d.bak-{{ ansible_date_time.iso8601_basic_short }}"
+    state: directory
+    mode: '0755'
+
+- name: Find current .repo files
+  ansible.builtin.find:
+    paths: /etc/yum.repos.d
+    patterns: "*.repo"
+  register: repo_files
+
+- name: Backup existing .repo files
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "/etc/yum.repos.d.bak-{{ ansible_date_time.iso8601_basic_short }}/"
+    remote_src: true
+  loop: "{{ repo_files.files }}"
+  when: repo_files.matched | int > 0
+
+- name: Remove existing .repo files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ repo_files.files }}"
+  when: repo_files.matched | int > 0
+
+# RHEL only — keep subscription-manager from re-adding CDN repos
+- name: Disable subscription-manager dnf plugin (RHEL only)
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/plugins/subscription-manager.conf
+    regexp: '^enabled='
+    line: 'enabled=0'
+    create: true
+    mode: '0644'
+  when: (ansible_distribution | lower) in ['redhat', 'red hat enterprise linux', 'redhat enterprise linux', 'rhel']
+
+- name: Drop clean local repo file
+  ansible.builtin.template:
+    src: yum-local.repo.j2
+    dest: /etc/yum.repos.d/yum-local.repo
+    mode: '0644'
+
+- name: Clean DNF cache
+  ansible.builtin.command: dnf clean all
+  changed_when: false
+
+- name: Rebuild cache from local repos
+  ansible.builtin.command: >
+    dnf --disablerepo="*" --enablerepo="baseos-local,appstream-local,crb-local" makecache
+  register: makecache
+  changed_when: "'created' in (makecache.stdout | lower + makecache.stderr | lower)"
+
+- name: Summary
+  ansible.builtin.debug:
+    msg:
+      - "Repos reset complete on {{ inventory_hostname }}"
+      - "makecache rc={{ makecache.rc }}"

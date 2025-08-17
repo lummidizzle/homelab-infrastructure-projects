@@ -1,0 +1,38 @@
+---
+# mode: "full" or "security"
+- name: Ensure dnf plugins installed
+  package:
+    name:
+      - dnf-plugins-core
+      - yum-utils
+    state: present
+
+- name: Clean + makecache
+  command: dnf makecache
+  changed_when: false
+
+- name: Apply updates (security-only when requested)
+  shell: |
+    set -e
+    if [ "{{ mode | default('full') }}" = "security" ]; then
+      dnf -y update --security
+    else
+      dnf -y update
+    fi
+  args: { executable: /bin/bash }
+
+# Check if reboot needed (returns non-zero if needed)
+- name: Check if reboot required
+  shell: dnf needs-restarting -r >/dev/null 2>&1
+  register: reboot_needed
+  changed_when: false
+  failed_when: false
+
+- name: Reboot if needed (controlled reboot)
+  reboot:
+    msg: "Rebooting after updates (Ansible automated)"
+    connect_timeout: 30
+    reboot_timeout: 1800
+    pre_reboot_delay: 5
+    post_reboot_delay: 15
+  when: reboot_needed.rc != 0
