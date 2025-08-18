@@ -67,7 +67,7 @@ Key goals:
 
 ## 📂 Repo Structure
 
-```text
+
 homelab-infrastructure-projects/
 │
 ├── ansible/        # Ansible roles, playbooks, inventory
