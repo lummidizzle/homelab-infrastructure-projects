@@ -67,14 +67,15 @@ Key goals:
 
 ## 📂 Repo Structure
 
+```text
 homelab-infrastructure-projects/
 │
-├── ansible/ # Ansible roles, playbooks, inventory
-├── scripts/ # PowerShell + Bash automation scripts
-├── docs/ # Documentation, error logs, architecture notes
-├── vm-inventory/ # Auto-generated VM inventory JSONs
-├── assets/ # Screenshots, diagrams, and supporting visuals
-└── README.md # This file (root overview)
+├── ansible/        # Ansible roles, playbooks, inventory
+├── scripts/        # PowerShell + Bash automation scripts
+├── docs/           # Documentation, error logs, architecture notes
+├── vm-inventory/   # Auto-generated VM inventory JSONs
+├── assets/         # Screenshots, diagrams, and supporting visuals
+└── README.md       # This file (root overview)
 
 
 ---
