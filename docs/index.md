@@ -1,13 +1,24 @@
-# 🗂 Documentation Hub
+---
+title: Homelab Infrastructure Projects
+description: RHEL-first, Ansible-automated, enterprise vibes. Built by Olumide.
+---
 
-Welcome to the documentation section of my homelab infrastructure project.
+<div align="center">
 
-This space will eventually include:
+# Homelab Infrastructure Projects
 
-- 📘 Step-by-step server setup guides
-- 🧱 Role-by-role breakdowns (Ansible, monitoring, backups)
-- 🚨 Troubleshooting logs (the good, the bad, and the “why is this even broken?”)
-- 📝 Weekly change logs and GitHub update notes
+RHEL-first, Ansible-automated, enterprise vibes. Built by **Olumide**.
 
-> Whether you're a recruiter, fellow sysadmin, or my future self — this is where the inner workings of the lab live.
+[![pages](https://img.shields.io/badge/pages-active-success)](./)
+[![repo size](https://img.shields.io/github/repo-size/lummidizzle/homelab-infrastructure-projects)](https://github.com/lummidizzle/homelab-infrastructure-projects)
+[![last commit](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
 
+<br/>
+
+<a href="https://github.com/lummidizzle/homelab-infrastructure-projects" style="display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid #444;text-decoration:none;">View on GitHub ↗</a>
+
+</div>
+
+---
+
+{% include_relative ../README.md %}
