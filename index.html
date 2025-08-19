@@ -1,6 +1,193 @@
-<!doctype html><meta charset="utf-8">
-<title>Homelab Infrastructure Projects</title>
-<h1>Homelab Infrastructure Projects</h1>
-<p>Welcome! This is the project homepage.</p>
-<p><a href="https://github.com/lummidizzle/homelab-infrastructure-projects">View the repo on GitHub</a></p>
-<p><a href="README.md">Open README.md</a></p>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Homelab Infrastructure Projects · Olumide</title>
+<meta name="description" content="RHEL-first, Ansible-automated, enterprise vibes. Built by Olumide." />
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#0f1621; --panel-2:#101826; --text:#e8eef7; --muted:#a9b4c6;
+    --brand:#7dd3fc; --brand-2:#22d3ee; --accent:#a78bfa; --ok:#34d399; --warn:#facc15;
+    --border:#1e293b; --ring:#334155;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+    color:var(--text); background:radial-gradient(1200px 800px at 10% -20%,#0e1420,transparent), radial-gradient(900px 600px at 110% -10%,#111a2b,transparent), var(--bg);
+  }
+
+  .wrap{max-width:1100px; margin:0 auto; padding:28px 18px 64px}
+  header{
+    display:flex; gap:18px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .logo{
+    display:flex; align-items:center; gap:14px;
+  }
+  .logo-blob{
+    width:44px; height:44px; border-radius:12px;
+    background:conic-gradient(from 210deg, var(--brand), var(--accent), var(--brand-2), var(--brand));
+    box-shadow:0 0 0 3px #0b0f14 inset, 0 8px 30px rgba(125,211,252,.2);
+  }
+  h1{margin:0; font-weight:800; letter-spacing:.2px; font-size:clamp(22px,3.8vw,34px)}
+  .sub{color:var(--muted); margin-top:6px; max-width:70ch}
+
+  .cta-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2)); color:var(--text); text-decoration:none;
+    border:1px solid var(--border); box-shadow:0 1px 0 0 var(--ring) inset;
+    transition:.15s transform, .15s box-shadow, .15s background;
+    font-weight:600;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(2,6,23,.35)}
+  .btn.brand{background:linear-gradient(180deg,#0ea5e9,#0891b2); border-color:#0ea5e9}
+  .btn.ghost{background:transparent}
+
+  /* Cards */
+  .grid{
+    margin-top:26px;
+    display:grid; gap:14px;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  }
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--border);
+    border-radius:16px; padding:16px; min-height:120px; position:relative; overflow:hidden;
+  }
+  .card:hover{box-shadow:0 12px 34px rgba(2,6,23,.45)}
+  .card .k{font-size:20px; opacity:.95}
+  .card h3{margin:8px 0 6px; font-size:18px}
+  .card p{margin:0; color:var(--muted); font-size:14px}
+  .card a{color:inherit; text-decoration:none; display:block}
+  .tagrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .tag{font-size:12px; color:#0b1220; background:linear-gradient(180deg,#93c5fd,#60a5fa);
+       padding:3px 8px; border-radius:999px; font-weight:700}
+  .tag.ok{background:linear-gradient(180deg,#86efac,#34d399)}
+  .tag.warn{background:linear-gradient(180deg,#fde68a,#fbbf24)}
+  .tag.muted{background:linear-gradient(180deg,#cbd5e1,#94a3b8)}
+
+  hr{border:none; height:1px; background:linear-gradient(90deg,transparent,#1f2937,transparent); margin:28px 0}
+
+  footer{margin-top:26px; color:var(--muted); font-size:13px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:#cbd5e1}
+  .tiny{opacity:.8}
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f8fafc; --panel:#ffffff; --panel-2:#f8fafc; --text:#0b1220; --muted:#475569; --border:#e2e8f0; --ring:#e2e8f0; }
+    body{background:linear-gradient(180deg,#f5f7fb,#eef2f7)}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="logo-blob" aria-hidden="true"></div>
+        <div>
+          <h1>Homelab Infrastructure Projects</h1>
+          <div class="sub">RHEL-first, Ansible-automated, enterprise vibes. Built by <strong>Olumide</strong>. Real servers, real scripts, real lessons.</div>
+          <div class="cta-row">
+            <a class="btn brand" href="https://github.com/lummidizzle/homelab-infrastructure-projects" target="_blank" rel="noopener">↗ View on GitHub</a>
+            <a class="btn" href="README.md">📖 Read the README</a>
+            <a class="btn ghost" href="#sections">↓ Explore sections</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="sections" class="grid">
+      <a class="card" href="ansible/">
+        <div class="k">🧰</div>
+        <h3>Ansible</h3>
+        <p>Roles, playbooks, inventory. Automation runs everything around me.</p>
+        <div class="tagrow"><span class="tag">RHEL</span><span class="tag">RBAC</span><span class="tag ok">Idempotent</span></div>
+      </a>
+
+      <a class="card" href="scripts/">
+        <div class="k">💻</div>
+        <h3>Scripts</h3>
+        <p>PowerShell + Bash for cleanup, backups, and repo hygiene.</p>
+        <div class="tagrow"><span class="tag">Bash</span><span class="tag">PowerShell</span><span class="tag ok">Cron</span></div>
+      </a>
+
+      <a class="card" href="docs/">
+        <div class="k">🗂️</div>
+        <h3>Docs</h3>
+        <p>Architecture notes, error logs, hardening trails, and receipts.</p>
+        <div class="tagrow"><span class="tag">STIG</span><span class="tag">Auditd</span><span class="tag muted">Markdown</span></div>
+      </a>
+
+      <a class="card" href="assets/">
+        <div class="k">🖼️</div>
+        <h3>Assets</h3>
+        <p>Screenshots, diagrams, inventory visuals.</p>
+        <div class="tagrow"><span class="tag">Diagrams</span><span class="tag">Screens</span></div>
+      </a>
+
+      <a class="card" href="nagios/">
+        <div class="k">📈</div>
+        <h3>Nagios</h3>
+        <p>Core monitoring + service checks with alerting.</p>
+        <div class="tagrow"><span class="tag ok">Green = Good</span><span class="tag warn">Pager Duty (future)</span></div>
+      </a>
+
+      <a class="card" href="windows-server-2022/">
+        <div class="k">🪟</div>
+        <h3>Windows 2022</h3>
+        <p>AD, DNS, Kerberos, domain configs.</p>
+        <div class="tagrow"><span class="tag">AD</span><span class="tag">DNS</span></div>
+      </a>
+
+      <a class="card" href="rhel9/">
+        <div class="k">🧱</div>
+        <h3>RHEL</h3>
+        <p>Configs, hardening, SELinux without the tears.</p>
+        <div class="tagrow"><span class="tag">SELinux</span><span class="tag">AIDE</span></div>
+      </a>
+
+      <a class="card" href="vm-inventory/">
+        <div class="k">🗃️</div>
+        <h3>VM Inventory</h3>
+        <p>Auto-generated JSONs of what’s alive and where.</p>
+        <div class="tagrow"><span class="tag">Sync</span><span class="tag">GitHub Actions</span></div>
+      </a>
+    </section>
+
+    <hr />
+
+    <section class="grid">
+      <a class="card" href="README.md#-server-roles--functions">
+        <div class="k">🧭</div>
+        <h3>Server Roles &amp; Functions</h3>
+        <p>Quick map of the homelab—who does what.</p>
+      </a>
+      <a class="card" href="README.md#-technologies-in-use">
+        <div class="k">🧪</div>
+        <h3>Tech Stack</h3>
+        <p>RHEL, CentOS Stream, Ubuntu, Windows, Nagios, Ansible…</p>
+      </a>
+      <a class="card" href="README.md#-automation-highlights">
+        <div class="k">⚙️</div>
+        <h3>Automation Highlights</h3>
+        <p>Auto-deploy, README refresh, VM sync + push, repo cleanup.</p>
+      </a>
+      <a class="card" href="README.md#-repo-structure">
+        <div class="k">🗺️</div>
+        <h3>Repo Structure</h3>
+        <p>High-level layout—what’s where, and why.</p>
+      </a>
+    </section>
+
+    <footer>
+      <div class="tiny">Built with 💪 + 🧠 by <span class="mono">Olumide</span>. Security-first, automation-forward.</div>
+      <div class="tiny">Last updated: <span id="lastmod" class="mono"></span></div>
+    </footer>
+  </div>
+<script>
+  // show last modified time from the file metadata
+  document.getElementById('lastmod').textContent = new Date(document.lastModified).toLocaleString();
+</script>
+</body>
+</html>
+
