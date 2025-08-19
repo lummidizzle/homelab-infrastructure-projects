@@ -5,10 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Homelab Infrastructure Projects — Olumide</title>
   <meta name="description" content="Homelab infrastructure projects: Ansible, monitoring, repos, docs, and automation." />
+
+  <!-- favicon -->
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+
+  <!-- Open Graph / share preview -->
+  <meta property="og:title" content="Homelab Infrastructure Projects — Olumide">
+  <meta property="og:description" content="RHEL-first, Ansible-automated, enterprise vibes.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lummidizzle.github.io/homelab-infrastructure-projects/">
+
   <style>
     :root { --bg:#0b1020; --card:#121933; --ink:#e9eefc; --muted:#a9b3d1; --acc:#6aa7ff; }
     * { box-sizing: border-box; }
-    body { margin:0; font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif; background:linear-gradient(180deg,#0b1020,#0a0d1a 35%); color:var(--ink); }
+    body { margin:0; font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,"Noto Sans",sans-serif; background:linear-gradient(180deg,#0b1020,#0a0d1a 35%); color:var(--ink); }
     header { padding:40px 20px 10px; text-align:center; }
     h1 { margin:0; font-size: clamp(28px, 4vw, 44px); letter-spacing:.3px; }
     .subtitle { color:var(--muted); margin-top:8px; }
@@ -16,8 +26,8 @@
     .badges img { height:20px; vertical-align:middle; }
     main { padding:28px 18px 60px; max-width:1100px; margin:0 auto; }
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; }
-    .card { background:var(--card); border:1px solid #1e2a55; border-radius:16px; padding:18px; text-decoration:none; color:var(--ink); box-shadow: 0 10px 24px rgba(0,0,0,.25); transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-    .card:hover { transform: translateY(-2px); border-color: var(--acc); box-shadow: 0 16px 36px rgba(0,0,0,.35); }
+    .card { background:var(--card); border:1px solid #1e2a55; border-radius:16px; padding:18px; text-decoration:none; color:var(--ink); box-shadow:0 10px 24px rgba(0,0,0,.25); transition:transform .15s, box-shadow .15s, border-color .15s; }
+    .card:hover { transform:translateY(-2px); border-color:var(--acc); box-shadow:0 16px 36px rgba(0,0,0,.35); }
     .card h3 { margin:0 0 6px; font-size:18px; }
     .card p { margin:0; color:var(--muted); font-size:14px; }
     footer { color:var(--muted); text-align:center; padding:16px 10px 40px; }
@@ -49,14 +59,14 @@
         <p>Architecture notes, procedures, and deep dives.</p>
       </a>
 
-      <a class="card" href="https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main/docs/error-log.md">
+      <a class="card" href="https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main/ansible/docs/error-log.md">
         <h3>🐛 Error Log</h3>
         <p>What broke, why it broke, and how it got fixed.</p>
       </a>
 
       <a class="card" href="https://github.com/lummidizzle/homelab-infrastructure-projects/tree/main/scripts">
         <h3>💻 Scripts</h3>
-        <p>PowerShell & Bash automation, ready to run.</p>
+        <p>PowerShell &amp; Bash automation, ready to run.</p>
       </a>
 
       <a class="card" href="https://github.com/lummidizzle/homelab-infrastructure-projects/tree/main/vm-inventory">
