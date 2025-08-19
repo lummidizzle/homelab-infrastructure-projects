@@ -1,37 +1,70 @@
 ---
-- name: Verify enabled repos match the allowlist
-  hosts: el9_stream:el9_rhel
-  gather_facts: false
+# repo-verify.yml — EL9 repo guardrails; accept RHSM arch-suffixed IDs; use local EPEL
+
+- name: Verify repo set matches guardrails (EL9)
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    approved_map:
+      "Red Hat Enterprise Linux|9":
+        - rhel-9-baseos-rpms
+        - rhel-9-appstream-rpms
+        - codeready-builder-for-rhel-9-x86_64-rpms
+        - epel-local
+      "RedHat|9":
+        - rhel-9-baseos-rpms
+        - rhel-9-appstream-rpms
+        - codeready-builder-for-rhel-9-x86_64-rpms
+        - epel-local
+      "CentOS Stream|9":
+        - local-baseos
+        - local-appstream
+        - local-crb
+        - epel-local
+        - epel-next-local
+
+    distro_key: "{{ ansible_distribution }}|{{ ansible_distribution_major_version }}"
+    approved_repos: "{{ approved_map.get(distro_key, ['local-baseos','local-appstream','local-crb','epel-local']) }}"
+
+  pre_tasks:
+    - name: End play on non-EL hosts
+      meta: end_play
+      when: ansible_os_family != 'RedHat'
+
   tasks:
-    - name: Read host's allowlist
-      ansible.builtin.slurp:
-        src: /root/repolist.allowlist
-      register: allow_slurp
-
-    - name: Normalize allowlist
-      ansible.builtin.set_fact:
-        allowlist: "{{ allow_slurp.content | b64decode |
-                       split('\n') | reject('equalto','') | list | sort }}"
-
-    - name: Get currently enabled repos
-      ansible.builtin.command: dnf -q repolist enabled
+    - name: Collect enabled repo IDs (normalized, one per line)
+      shell: |
+        set -euo pipefail
+        dnf -q repolist --enabled -v \
+          | sed -n 's/^Repo-id[[:space:]]*:[[:space:]]*//p' \
+          | sed -e 's/^epel$/epel-local/' \
+                -e 's/^\(crb\|powertools\)$/local-crb/' \
+                -e 's/^baseos$/local-baseos/' \
+                -e 's/^appstream$/local-appstream/' \
+                -e 's/^rhel-\([0-9]\+\)-for-x86_64-baseos-rpms$/rhel-\1-baseos-rpms/' \
+                -e 's/^rhel-\([0-9]\+\)-for-x86_64-appstream-rpms$/rhel-\1-appstream-rpms/' \
+          | sort -u
+      args:
+        executable: /bin/bash
+      register: norm
       changed_when: false
-      register: repolist
 
-    - name: Normalize current list
-      ansible.builtin.set_fact:
-        current: "{{ repolist.stdout_lines[1:] | map('split') | map('first') | list | sort }}"
+    - name: Save normalized list
+      set_fact:
+        enabled_norm: "{{ norm.stdout_lines }}"
 
     - name: Compute drift
-      ansible.builtin.set_fact:
-        extras:  "{{ current   | difference(allowlist) }}"
-        missing: "{{ allowlist | difference(current)   }}"
+      set_fact:
+        extras: "{{ enabled_norm | difference(approved_repos) }}"
+        missing: "{{ approved_repos | difference(enabled_norm) }}"
 
     - name: Assert no drift
-      ansible.builtin.assert:
+      assert:
         that:
-          - extras  | length == 0
+          - extras | length == 0
           - missing | length == 0
-        success_msg: "Repo set matches allowlist."
         fail_msg: "Repo drift detected. extras={{ extras }} missing={{ missing }}"
+        success_msg: "Repo set matches allowlist."
 
