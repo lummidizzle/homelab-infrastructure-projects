@@ -1,0 +1,103 @@
+---
+# roles/repo_guardrails/tasks/main.yml
+
+- name: Decide policy for this host
+  ansible.builtin.set_fact:
+    repo_policy: "{{ 'stream9' if 'el9_stream' in group_names else ('rhel9' if 'el9_rhel' in group_names else 'unknown') }}"
+
+# ---------- Safety backup (once) ----------
+- name: Backup /etc/yum.repos.d (once)
+  ansible.builtin.archive:
+    path: /etc/yum.repos.d
+    dest: "/root/yum.repos.d.{{ ansible_date_time.date }}-{{ ansible_date_time.time | regex_replace(':','') }}.tgz"
+    format: gz
+  register: _repo_backup
+  changed_when: true
+  when: repo_backup_done | default(false) | bool == false
+
+- name: Mark backup done
+  ansible.builtin.set_fact:
+    repo_backup_done: true
+  when: _repo_backup is changed
+
+# ---------- Stream 9 (CentOS Stream/Rocky) ----------
+- name: Remove stray local/epel leftovers (Stream9)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/yum.repos.d/local-*.repo
+    - /etc/yum.repos.d/epel-next-local*.repo
+  when: repo_policy == 'stream9'
+  ignore_errors: true
+
+- name: Deploy managed local repo for Stream9
+  ansible.builtin.template:
+    src: local-stream9.repo.j2
+    dest: /etc/yum.repos.d/local-stream9.repo
+    mode: "0644"
+  when: repo_policy == 'stream9'
+
+- name: Ensure epel-local exists (Stream9)
+  ansible.builtin.yum_repository:
+    name: epel-local
+    description: Local EPEL 9 (Upstream for now)
+    baseurl: https://download.fedoraproject.org/pub/epel/9/Everything/$basearch/
+    enabled: true
+    gpgcheck: true
+    gpgkey: /etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-9
+    file: local-epel
+  when: repo_policy == 'stream9'
+
+# ---------- RHEL 9 ----------
+- name: Make RHSM manage repos + refresh entitlements
+  ansible.builtin.shell: |
+    subscription-manager config --rhsm.manage_repos=1
+    subscription-manager refresh
+  args:
+    executable: /bin/bash
+  when: repo_policy == 'rhel9'
+
+- name: Enable the three main RHEL9 repos
+  ansible.builtin.shell: |
+    subscription-manager repos \
+      --enable=rhel-9-for-x86_64-baseos-rpms \
+      --enable=rhel-9-for-x86_64-appstream-rpms \
+      --enable=codeready-builder-for-rhel-9-x86_64-rpms
+  args:
+    executable: /bin/bash
+  when: repo_policy == 'rhel9'
+
+- name: Ensure epel-release present (RHEL9/Rocky9)
+  ansible.builtin.package:
+    name: epel-release
+    state: present
+  when: repo_policy in ['rhel9','rocky9']
+
+# ---------- Allowlist + sanity makecache ----------
+- name: Compute explicit repo allowlist
+  ansible.builtin.set_fact:
+    repo_allowlist: >-
+      {{ 'local-baseos,local-appstream,local-crb,epel-local'
+         if repo_policy == 'stream9'
+         else 'rhel-9-for-x86_64-baseos-rpms,rhel-9-for-x86_64-appstream-rpms,codeready-builder-for-rhel-9-x86_64-rpms,epel' }}
+
+- name: Makecache restricted to allowlist
+  ansible.builtin.shell: >
+    dnf -qy --disablerepo='*' --enablerepo='{{ repo_allowlist }}' makecache
+  args:
+    executable: /bin/bash
+  register: makecache_out
+  changed_when: "'Metadata cache created' in (makecache_out.stdout + makecache_out.stderr)"
+
+- name: Show enabled repos (sanity)
+  ansible.builtin.shell: dnf -q repolist enabled
+  args:
+    executable: /bin/bash
+  register: repolist_out
+  changed_when: false
+
+- name: Print enabled repos
+  ansible.builtin.debug:
+    var: repolist_out.stdout_lines
+

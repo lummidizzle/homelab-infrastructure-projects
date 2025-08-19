@@ -56,3 +56,19 @@ security
 ansible_user=oluadmin
 ansible_become=true
 
+
+# === OS/Policy groups ===
+[rhel10]
+ansible.corp.local
+
+[el9_rhel]
+monitoring.corp.local
+
+[el9_stream]
+reposync.corp.local
+backup.corp.local
+security.corp.local
+
+[el9_rocky]
+devops.corp.local
+# If dns-nfs is Rocky, move it here too and remove from el9_stream

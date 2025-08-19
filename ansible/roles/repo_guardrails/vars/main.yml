@@ -1,0 +1,19 @@
+stream9_baseurl_root: "http://reposync.corp.local/centos-stream/9"
+epel_next9_baseurl: "https://dl.fedoraproject.org/pub/epel/next/9/Everything/$basearch/"
+
+allowlist_stream9:
+  - local-baseos
+  - local-appstream
+  - local-crb
+  - epel-next-local
+
+allowlist_rhel9:
+  - rhel-9-for-x86_64-baseos-rpms
+  - rhel-9-for-x86_64-appstream-rpms
+  - codeready-builder-for-rhel-9-x86_64-rpms
+  - epel
+
+repo_smoke_test: false
+smoke_pkgs_stream9: [rsync, tree, jq]
+smoke_pkgs_rhel9:   [rsync, tree, jq]
+

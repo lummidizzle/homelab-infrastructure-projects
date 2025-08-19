@@ -1,0 +1,7 @@
+---
+- name: Enforce repo guardrails + safe makecache
+  hosts: el9_stream,el9_rhel
+  become: true
+  roles:
+    - repo_guardrails
+

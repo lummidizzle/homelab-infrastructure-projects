@@ -1,0 +1,24 @@
+[local-baseos]
+name=Local CentOS Stream 9 BaseOS
+baseurl={{ stream9_baseurl_root }}/baseos/
+enabled=1
+gpgcheck=0
+
+[local-appstream]
+name=Local CentOS Stream 9 AppStream
+baseurl={{ stream9_baseurl_root }}/appstream/
+enabled=1
+gpgcheck=0
+
+[local-crb]
+name=Local CentOS Stream 9 CRB
+baseurl={{ stream9_baseurl_root }}/crb/
+enabled=1
+gpgcheck=0
+
+[epel-next-local]
+name=Local EPEL Next 9 (Upstream for now)
+baseurl={{ epel_next9_baseurl }}
+enabled=1
+gpgcheck=0
+
