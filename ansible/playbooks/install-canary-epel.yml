@@ -1,0 +1,69 @@
+- name: Canary install from local repos (EL9 only)
+  hosts: rhel_servers
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+  strategy: linear
+  serial: 2    # runs 2 hosts at a time by design
+
+  vars:
+    canary_pkg: htop
+    enable_repos: "epel-local,local-baseos,local-appstream,local-crb"
+    repo_heads:
+      - http://reposync.corp.local/centos-stream/9/baseos/repodata/repomd.xml
+      - http://reposync.corp.local/centos-stream/9/appstream/repodata/repomd.xml
+      - http://reposync.corp.local/centos-stream/9/crb/repodata/repomd.xml
+      - http://reposync.corp.local/repos/el9/epel/repodata/repomd.xml
+
+  pre_tasks:
+    - name: Decide eligibility (is this host EL9?)
+      set_fact:
+        is_el9: "{{ (ansible_facts.os_family == 'RedHat') and (ansible_facts.distribution_major_version | int == 9) }}"
+
+    - name: Log OS info
+      debug:
+        msg: "{{ inventory_hostname }} => {{ ansible_facts.os_family }} {{ ansible_facts.distribution }} {{ ansible_facts.distribution_major_version }} (EL9? {{ is_el9 }})"
+
+  tasks:
+    - name: Skip non-EL9 cleanly
+      debug:
+        msg: "Skipping non-EL9 host {{ inventory_hostname }}."
+      when: not is_el9
+
+    - block:
+        - name: HEAD check each repo URL (must return 200)
+          uri:
+            url: "{{ item }}"
+            method: HEAD
+            status_code: 200
+            timeout: 5
+            return_content: no
+          loop: "{{ repo_heads }}"
+          changed_when: false
+
+        - name: Makecache from ONLY our local repos
+          dnf:
+            name: "*"
+            state: latest
+            update_cache: yes
+            disablerepo: "*"
+            enablerepo: "{{ enable_repos }}"
+          changed_when: false
+
+        - name: Install canary package
+          dnf:
+            name: "{{ canary_pkg }}"
+            state: present
+            disablerepo: "*"
+            enablerepo: "{{ enable_repos }}"
+            update_cache: yes
+
+        - name: Verify install
+          shell: "rpm -qi {{ canary_pkg }} | egrep 'Name|Version|Release|Vendor'"
+          register: pkg_info
+          changed_when: false
+
+        - debug:
+            var: pkg_info.stdout_lines
+      when: is_el9
+

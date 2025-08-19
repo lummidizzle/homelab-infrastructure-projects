@@ -1,0 +1,49 @@
+- name: Deploy local EPEL repo to EL9 clients
+  hosts: rhel_servers
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Show OS facts (for visibility)
+      debug:
+        msg: "{{ inventory_hostname }} => {{ ansible_facts.os_family }} {{ ansible_facts.distribution }} {{ ansible_facts.distribution_major_version }}"
+
+    - name: Install local EPEL .repo (EL9 only)
+      copy:
+        src: "{{ playbook_dir }}/../files/epel-local.repo"
+        dest: /etc/yum.repos.d/epel-local.repo
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
+      when:
+        - ansible_facts.os_family == 'RedHat'
+        - (ansible_facts.distribution_major_version | int) == 9
+
+    - name: Disable any upstream EPEL repos (avoid mixing) - EL9 only
+      shell: |
+        for f in /etc/yum.repos.d/epel*.repo; do
+          [ -f "$f" ] || continue
+          [ "$(basename "$f")" = "epel-local.repo" ] && continue
+          sed -i 's/^enabled=1/enabled=0/' "$f"
+        done
+      args: { executable: /bin/bash }
+      when:
+        - ansible_facts.os_family == 'RedHat'
+        - (ansible_facts.distribution_major_version | int) == 9
+
+    - name: Rebuild metadata and quick visibility check (EL9 only)
+      shell: |
+        dnf clean all
+        dnf --disablerepo='*' --enablerepo='epel-local' makecache
+        dnf --disablerepo='*' --enablerepo='epel-local' repoinfo || true
+      args: { executable: /bin/bash }
+      register: dnf_check
+      changed_when: false
+      when:
+        - ansible_facts.os_family == 'RedHat'
+        - (ansible_facts.distribution_major_version | int) == 9
+
+    - debug:
+        var: dnf_check.stdout_lines
+      when: dnf_check is defined
