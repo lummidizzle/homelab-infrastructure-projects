@@ -1,0 +1,7 @@
+[epel-next-local]
+name=Local EPEL Next 9 (HP2 over HTTP)
+baseurl=http://reposync.corp.local/repos/el9/epel-next/
+enabled=1
+gpgcheck=0
+metadata_expire=6h
+

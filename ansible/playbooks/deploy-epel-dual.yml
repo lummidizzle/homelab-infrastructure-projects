@@ -1,0 +1,98 @@
+# (paste the file contents from above here)
+---
+- name: "Deploy correct local EPEL per distro (EL9 only, robust + override)"
+  hosts: rhel_servers
+  become: true
+  gather_facts: true
+
+  vars:
+    epel_local_src: "{{ playbook_dir }}/../files/epel-local.repo"
+    epel_next_src: "{{ playbook_dir }}/../files/epel-next-local.repo"
+
+  tasks:
+    - name: "Decide OS flavor"
+      set_fact:
+        is_el9: "{{ (ansible_facts.os_family == 'RedHat') and (ansible_facts.distribution_major_version | int == 9) }}"
+        is_rhel: "{{ (ansible_facts.distribution | lower) is search('red hat') }}"
+        is_rocky: "{{ (ansible_facts.distribution | lower) is search('rocky') }}"
+
+    - name: "Skip non-EL9"
+      meta: end_host
+      when: not is_el9
+
+    # --- three detectors for Stream-ish ---
+    - name: "Detector A: repo names mention CentOS Stream"
+      shell: "dnf -q repolist --enabled | grep -qi 'CentOS Stream' && echo yes || echo no"
+      register: detect_name
+      changed_when: false
+
+    - name: "Detector B: any baseurl contains /centos-stream/9/"
+      shell: |
+        grep -RhoE '^\s*baseurl\s*=\s*\S+' /etc/yum.repos.d/*.repo 2>/dev/null \
+        | grep -q '/centos-stream/9/' && echo yes || echo no
+      register: detect_url
+      changed_when: false
+      args:
+        executable: /bin/bash
+
+    - name: "Detector C: centos-stream-release pkg"
+      shell: "rpm -q centos-stream-release >/dev/null 2>&1 && echo yes || echo no"
+      register: detect_pkg
+      changed_when: false
+
+    - name: "Consolidate detection + apply host_vars override"
+      set_fact:
+        is_streamish_detected: "{{ (detect_name.stdout|default('no') == 'yes') or
+                                   (detect_url.stdout|default('no') == 'yes') or
+                                   (detect_pkg.stdout|default('no') == 'yes') }}"
+        override_next: "{{ (force_epel_variant | default('') | lower) in ['next','epel-next','epel_next'] }}"
+        override_epel: "{{ (force_epel_variant | default('') | lower) in ['epel','9','epel-9'] }}"
+        is_streamish_final: "{{ override_next | ternary(true, (override_epel | ternary(false, is_streamish_detected))) }}"
+
+    - name: "Log decision"
+      debug:
+        msg: "{{ inventory_hostname }} => EL9={{is_el9}} RHEL={{is_rhel}} Rocky={{is_rocky}} StreamishDetected={{is_streamish_detected}} Override={{force_epel_variant|default('')}} FinalStreamish={{is_streamish_final}}"
+
+    # Streamish (final) => EPEL NEXT
+    - name: "Install EPEL NEXT (final streamish)"
+      copy:
+        src: "{{ epel_next_src }}"
+        dest: /etc/yum.repos.d/epel-next-local.repo
+        owner: root
+        group: root
+        mode: "0644"
+        backup: yes
+      when: is_streamish_final
+
+    - name: "Disable standard EPEL on streamish (avoid mixing)"
+      shell: |
+        for f in /etc/yum.repos.d/epel*.repo; do
+          [ -f "$f" ] || continue
+          [ "$(basename "$f")" = "epel-next-local.repo" ] && continue
+          sed -i 's/^enabled=1/enabled=0/' "$f"
+        done
+      args:
+        executable: /bin/bash
+      when: is_streamish_final
+
+    # Non-streamish => EPEL 9
+    - name: "Install EPEL 9 (final non-streamish)"
+      copy:
+        src: "{{ epel_local_src }}"
+        dest: /etc/yum.repos.d/epel-local.repo
+        owner: root
+        group: root
+        mode: "0644"
+        backup: yes
+      when: not is_streamish_final
+
+    - name: "Disable EPEL NEXT on non-streamish (avoid mixing)"
+      shell: |
+        for f in /etc/yum.repos.d/epel-next*.repo; do
+          [ -f "$f" ] || continue
+          sed -i 's/^enabled=1/enabled=0/' "$f"
+        done
+      args:
+        executable: /bin/bash
+      when: not is_streamish_final
+
