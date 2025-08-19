@@ -33,10 +33,7 @@
 
     - name: Disable ALL repos
       ansible.builtin.shell: "dnf config-manager --set-disabled '*'"
-      args:
-        warn: false
       register: disable_all_repos
-      changed_when: "'Nothing to do' not in disable_all_repos.stdout + disable_all_repos.stderr"
       when: ansible_os_family == "RedHat"
 
     - name: Enable ONLY local repos

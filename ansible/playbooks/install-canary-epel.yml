@@ -1,4 +1,5 @@
-- name: Canary install with correct base + EPEL selection (robust + override)
+---
+- name: Canary install from local repos (EL9 only) – auto-pick canary
   hosts: rhel_servers
   become: true
   gather_facts: true
@@ -7,62 +8,65 @@
   serial: 2
 
   vars:
-    canary_pkg: htop
-    # Heads we can probe (we don't probe RHSM)
+    # NOTE: Do NOT define forced_canary_pkg here. We intentionally only *reference* it with "is defined".
     stream_heads:
       - http://reposync.corp.local/centos-stream/9/baseos/repodata/repomd.xml
       - http://reposync.corp.local/centos-stream/9/appstream/repodata/repomd.xml
       - http://reposync.corp.local/centos-stream/9/crb/repodata/repomd.xml
       - http://reposync.corp.local/repos/el9/epel-next/repodata/repomd.xml
     epel9_head: http://reposync.corp.local/repos/el9/epel/repodata/repomd.xml
-    # optional per-host override; set in host_vars/<host>.yml if needed:
-    # force_epel_variant: next | epel
-    # default: unset (auto-detect)
 
   pre_tasks:
-    - name: Decide EL version + RHEL facts
+    - name: Decide EL version + RHEL facts (robust)
       set_fact:
         is_el9: "{{ (ansible_facts.os_family == 'RedHat') and (ansible_facts.distribution_major_version | int == 9) }}"
-        is_rhel: "{{ (ansible_facts.distribution | lower) is search('red hat') }}"
+        is_rhel: "{{ (ansible_facts.distribution | regex_search('(?i)^red\\s*hat')) is not none }}"
         rhel_arch_crb: "codeready-builder-for-rhel-9-{{ ansible_architecture }}-rpms"
 
-    # --- three independent detectors for "Streamish" ---
     - name: Detector A (repo names mention CentOS Stream)
-      shell: dnf -q repolist --enabled | grep -qi 'CentOS Stream' && echo yes || echo no
+      shell: "dnf -q repolist --enabled | grep -qi 'CentOS Stream' && echo yes || echo no"
       register: detect_name
       changed_when: false
 
-    - name: Detector B (any baseurl contains /centos-stream/9/)
+    - name: Detector B (baseurl contains /centos-stream/9/)
       shell: |
         grep -RhoE '^\s*baseurl\s*=\s*\S+' /etc/yum.repos.d/*.repo 2>/dev/null \
         | grep -q '/centos-stream/9/' && echo yes || echo no
+      args: { executable: /bin/bash }
       register: detect_url
       changed_when: false
 
-    - name: Detector C (centos-stream-release package)
-      shell: rpm -q centos-stream-release >/dev/null 2>&1 && echo yes || echo no
+    - name: Detector C (centos-stream-release pkg)
+      shell: "rpm -q centos-stream-release >/dev/null 2>&1 && echo yes || echo no"
       register: detect_pkg
       changed_when: false
 
-    - name: Consolidate detection and apply override if present
+    - name: Set detector result + normalize override
       set_fact:
-        is_streamish_detected: "{{ (detect_name.stdout|default('no')=='yes') or
-                                  (detect_url.stdout|default('no')=='yes') or
-                                  (detect_pkg.stdout|default('no')=='yes') }}"
-        override_next: "{{ (force_epel_variant | default('') | lower) in ['next','epel-next','epel_next'] }}"
-        override_epel: "{{ (force_epel_variant | default('') | lower) in ['epel','9','epel-9'] }}"
-        is_streamish: "{{ override_next | ternary(true, (override_epel | ternary(false, is_streamish_detected))) }}"
+        is_streamish_detected: "{{ (detect_name.stdout|default('no') == 'yes') or
+                                  (detect_url.stdout|default('no') == 'yes') or
+                                  (detect_pkg.stdout|default('no') == 'yes') }}"
+        force_epel: "{{ force_epel_variant | default('') | lower }}"
 
-    - name: Build repo enable list per host
+    - name: Final streamish decision (allow manual override)
+      set_fact:
+        is_streamish_final: >-
+          {{
+            force_epel in ['next','epel-next','epel_next']
+            or (force_epel in ['epel','9','epel-9'] and false)
+            or (force_epel|length == 0 and is_streamish_detected)
+          }}
+
+    - name: Build repo enable list (RHEL uses RHSM; others use local mirrors)
       set_fact:
         enable_repos: >-
           {{
             is_rhel
             | ternary(
                 'epel-local,rhel-9-baseos-rpms,rhel-9-appstream-rpms,' ~ rhel_arch_crb,
-                (is_streamish
-                  | ternary('epel-next-local,local-baseos,local-appstream,local-crb',
-                            'epel-local,local-baseos,local-appstream,local-crb'))
+                (is_streamish_final
+                 | ternary('epel-next-local,local-baseos,local-appstream,local-crb',
+                           'epel-local,local-baseos,local-appstream,local-crb'))
               )
           }}
 
@@ -70,41 +74,90 @@
       meta: end_host
       when: not is_el9
 
-    - name: HEAD checks (only our mirrors; RHSM not probed)
+    - name: HEAD checks for mirrors we serve
       uri:
         url: "{{ item }}"
         method: HEAD
         status_code: 200
         timeout: 5
         return_content: no
-      loop: "{{ is_streamish | ternary(stream_heads, [epel9_head]) }}"
+      loop: "{{ is_streamish_final | ternary(stream_heads, [epel9_head]) }}"
       changed_when: false
 
+    # Best-effort: enable RHSM repos on RHEL (no-fail if not registered)
+    - name: If RHEL, try enabling RHSM base/appstream/codeready (non-fatal)
+      shell: >
+        subscription-manager repos
+        --enable rhel-9-baseos-rpms
+        --enable rhel-9-appstream-rpms
+        --enable {{ rhel_arch_crb }}
+      register: rhsm_enable
+      changed_when: rhsm_enable.rc == 0
+      failed_when: false
+      when: is_rhel
+
+    - name: Decide candidate list per host
+      set_fact:
+        candidates: >-
+          {{
+            (is_streamish_final | ternary(
+              ['kitty-terminfo','ncdu','ripgrep','fzf','bat'],
+              ['ncdu','ripgrep','fzf','bat','htop']
+            ))
+          }}
+
+    - name: Probe candidates in enabled repos
+      shell: >
+        dnf -q repoquery --qf '%{name}'
+        --disablerepo='*' --enablerepo='{{ enable_repos }}' {{ item }}
+      register: probe
+      changed_when: false
+      failed_when: false
+      loop: "{{ candidates }}"
+      when: forced_canary_pkg is not defined
+
+    - name: Pick first available candidate (if not forced)
+      set_fact:
+        chosen_pkg: "{{ (probe.results
+                          | selectattr('rc','eq',0)
+                          | selectattr('stdout','!=','')
+                          | map(attribute='item') | list | first | default('')) }}"
+      when: forced_canary_pkg is not defined
+
+    - name: Fail if no candidate found
+      fail:
+        msg: >-
+          No candidate package available in enabled repos ({{ enable_repos }}).
+          Tried: {{ candidates }}
+      when: forced_canary_pkg is not defined and (chosen_pkg | default('')) == ''
+
   tasks:
-    - name: Makecache from ONLY our selected repos
+    - name: Make cache from ONLY our selected repos (no upgrades)
       dnf:
-        name: "*"
-        state: latest
         update_cache: yes
         disablerepo: "*"
         enablerepo: "{{ enable_repos }}"
       changed_when: false
 
-    - name: Install canary package
+    - name: Install canary (forced or chosen)
       dnf:
-        name: "{{ canary_pkg }}"
+        name: "{{ (forced_canary_pkg if (forced_canary_pkg is defined) else chosen_pkg) }}"
         state: present
         disablerepo: "*"
         enablerepo: "{{ enable_repos }}"
         update_cache: yes
 
     - name: Verify install
-      shell: "rpm -qi {{ canary_pkg }} | egrep 'Name|Version|Release|Vendor'"
+      shell: "rpm -qi {{ (forced_canary_pkg if (forced_canary_pkg is defined) else chosen_pkg) }} | egrep 'Name|Version|Release|Vendor'"
       register: pkg_info
       changed_when: false
 
     - debug:
-        msg: "{{ inventory_hostname }} => RHEL={{is_rhel}} Streamish={{is_streamish}} Override={{force_epel_variant|default('')}} Repos={{enable_repos}}"
+        msg: >-
+          {{ inventory_hostname }} =>
+          RHEL={{ is_rhel }} Streamish={{ is_streamish_final }}
+          Repos={{ enable_repos }}
+          Canary={{ (forced_canary_pkg if (forced_canary_pkg is defined) else chosen_pkg) }}
     - debug:
         var: pkg_info.stdout_lines
 

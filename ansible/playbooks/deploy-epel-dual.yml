@@ -1,4 +1,3 @@
-# (paste the file contents from above here)
 ---
 - name: "Deploy correct local EPEL per distro (EL9 only, robust + override)"
   hosts: rhel_servers
@@ -7,7 +6,7 @@
 
   vars:
     epel_local_src: "{{ playbook_dir }}/../files/epel-local.repo"
-    epel_next_src: "{{ playbook_dir }}/../files/epel-next-local.repo"
+    epel_next_src:  "{{ playbook_dir }}/../files/epel-next-local.repo"
 
   tasks:
     - name: "Decide OS flavor"
@@ -20,7 +19,7 @@
       meta: end_host
       when: not is_el9
 
-    # --- three detectors for Stream-ish ---
+    # ---------- three detectors for Stream-ish ----------
     - name: "Detector A: repo names mention CentOS Stream"
       shell: "dnf -q repolist --enabled | grep -qi 'CentOS Stream' && echo yes || echo no"
       register: detect_name
@@ -40,20 +39,33 @@
       register: detect_pkg
       changed_when: false
 
-    - name: "Consolidate detection + apply host_vars override"
+    # ---------- consolidate detection & apply override (split steps) ----------
+    - name: "Set detection booleans + capture host override string"
       set_fact:
         is_streamish_detected: "{{ (detect_name.stdout|default('no') == 'yes') or
                                    (detect_url.stdout|default('no') == 'yes') or
                                    (detect_pkg.stdout|default('no') == 'yes') }}"
-        override_next: "{{ (force_epel_variant | default('') | lower) in ['next','epel-next','epel_next'] }}"
-        override_epel: "{{ (force_epel_variant | default('') | lower) in ['epel','9','epel-9'] }}"
-        is_streamish_final: "{{ override_next | ternary(true, (override_epel | ternary(false, is_streamish_detected))) }}"
+        force_epel: "{{ force_epel_variant | default('') | lower }}"
+
+    - name: "Default final decision to detector result"
+      set_fact:
+        is_streamish_final: "{{ is_streamish_detected }}"
+
+    - name: "Override: force NEXT if host_vars says so"
+      set_fact:
+        is_streamish_final: true
+      when: force_epel in ['next','epel-next','epel_next']
+
+    - name: "Override: force EPEL (not NEXT) if host_vars says so"
+      set_fact:
+        is_streamish_final: false
+      when: force_epel in ['epel','9','epel-9']
 
     - name: "Log decision"
       debug:
-        msg: "{{ inventory_hostname }} => EL9={{is_el9}} RHEL={{is_rhel}} Rocky={{is_rocky}} StreamishDetected={{is_streamish_detected}} Override={{force_epel_variant|default('')}} FinalStreamish={{is_streamish_final}}"
+        msg: "{{ inventory_hostname }} => EL9={{is_el9}} RHEL={{is_rhel}} Rocky={{is_rocky}}  DetectedStreamish={{is_streamish_detected}} Override={{force_epel|default('')}} FinalStreamish={{is_streamish_final}}"
 
-    # Streamish (final) => EPEL NEXT
+    # ---------- apply the decision ----------
     - name: "Install EPEL NEXT (final streamish)"
       copy:
         src: "{{ epel_next_src }}"
@@ -75,7 +87,6 @@
         executable: /bin/bash
       when: is_streamish_final
 
-    # Non-streamish => EPEL 9
     - name: "Install EPEL 9 (final non-streamish)"
       copy:
         src: "{{ epel_local_src }}"

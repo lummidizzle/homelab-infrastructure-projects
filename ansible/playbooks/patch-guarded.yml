@@ -1,0 +1,80 @@
+---
+# Guarded patch workflow for EL9 hosts (RHEL + Stream)
+- name: Guarded patch (repo allowlist + rehearsal + optional apply)
+  hosts: "el9_*"
+  become: true
+  gather_facts: false
+
+  vars:
+    # Default allowlists (used if you don't override in group_vars)
+    repo_allowlist_default_stream:
+      - local-baseos
+      - local-appstream
+      - local-crb
+      - epel-local
+      # - epel-next-local     # uncomment if you want Next enabled by default
+
+    repo_allowlist_default_rhel:
+      - rhel-9-for-x86_64-baseos-rpms
+      - rhel-9-for-x86_64-appstream-rpms
+      - codeready-builder-for-rhel-9-x86_64-rpms
+      - epel
+
+    # Pick the right list (or use group_vars if you set repo_allowlist there)
+    repo_allowlist: >-
+      {{
+        (repo_allowlist | default(None)) or
+        (repo_allowlist_default_stream if 'el9_stream' in group_names else
+         repo_allowlist_default_rhel)
+      }}
+
+    allowed_enable: "{{ repo_allowlist | join(',') }}"
+    apply_updates: false   # flip to true at runtime to actually patch
+    reboot_ok:     false   # flip to true at runtime to reboot after patch
+
+  roles:
+    # This enforces/repairs repos; safe/idempotent
+    - { role: repo_guardrails, tags: ['guardrails'] }
+
+  tasks:
+    # --- Sanity: make sure only allowlisted repos are enabled ---
+    - name: Sanity | capture enabled repo IDs
+      ansible.builtin.shell: "dnf -q repolist enabled | sed 1d | awk '{print $1}'"
+      changed_when: false
+      register: repolist_out
+      tags: ['sanity','always']
+
+    - name: Sanity | compute diff from allowlist
+      ansible.builtin.set_fact:
+        repo_diff: "{{ repolist_out.stdout_lines | difference(repo_allowlist) }}"
+      tags: ['sanity','always']
+
+    - name: Sanity | fail if any non-allowlisted repo is enabled
+      ansible.builtin.assert:
+        that: repo_diff | length == 0
+        fail_msg: "Enabled repos outside allowlist: {{ repo_diff }}"
+        success_msg: "Enabled repos match allowlist ({{ repo_allowlist | join(', ') }})."
+      tags: ['sanity','always']
+
+    # --- Rehearsal: download updates only (no install) ---
+    - name: Rehearsal | prefetch updates (downloadonly)
+      ansible.builtin.shell: >
+        dnf -qy --disablerepo='*' --enablerepo='{{ allowed_enable }}' makecache &&
+        dnf -qy --disablerepo='*' --enablerepo='{{ allowed_enable }}' --downloadonly update
+      register: rehearsal_out
+      changed_when: rehearsal_out.rc == 0
+      tags: ['rehearsal']
+
+    # --- Apply (optional): actually patch, then reboot if asked ---
+    - name: Patch | apply updates (guarded)
+      ansible.builtin.shell: >
+        dnf -y --disablerepo='*' --enablerepo='{{ allowed_enable }}' update
+      when: apply_updates | bool
+      tags: ['patch']
+
+    - name: Patch | reboot when requested
+      ansible.builtin.reboot:
+        reboot_timeout: 1800
+      when: apply_updates | bool and reboot_ok | bool
+      tags: ['patch']
+

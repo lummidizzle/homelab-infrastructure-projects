@@ -1,0 +1,6 @@
+repo_allowlist:
+  - local-baseos
+  - local-appstream
+  - local-crb
+  - epel-next-local
+  - epel-local

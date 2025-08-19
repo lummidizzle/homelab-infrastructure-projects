@@ -1,0 +1,5 @@
+repo_allowlist:
+  - baseos
+  - appstream
+  - crb
+  - epel

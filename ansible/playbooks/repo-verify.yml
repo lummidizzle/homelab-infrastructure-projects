@@ -1,0 +1,37 @@
+---
+- name: Verify enabled repos match the allowlist
+  hosts: el9_stream:el9_rhel
+  gather_facts: false
+  tasks:
+    - name: Read host's allowlist
+      ansible.builtin.slurp:
+        src: /root/repolist.allowlist
+      register: allow_slurp
+
+    - name: Normalize allowlist
+      ansible.builtin.set_fact:
+        allowlist: "{{ allow_slurp.content | b64decode |
+                       split('\n') | reject('equalto','') | list | sort }}"
+
+    - name: Get currently enabled repos
+      ansible.builtin.command: dnf -q repolist enabled
+      changed_when: false
+      register: repolist
+
+    - name: Normalize current list
+      ansible.builtin.set_fact:
+        current: "{{ repolist.stdout_lines[1:] | map('split') | map('first') | list | sort }}"
+
+    - name: Compute drift
+      ansible.builtin.set_fact:
+        extras:  "{{ current   | difference(allowlist) }}"
+        missing: "{{ allowlist | difference(current)   }}"
+
+    - name: Assert no drift
+      ansible.builtin.assert:
+        that:
+          - extras  | length == 0
+          - missing | length == 0
+        success_msg: "Repo set matches allowlist."
+        fail_msg: "Repo drift detected. extras={{ extras }} missing={{ missing }}"
+
