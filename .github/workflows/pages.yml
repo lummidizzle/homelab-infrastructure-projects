@@ -18,8 +18,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs'
-
+          path: '.'   # ⬅️ publish the repo root where index.html lives
   deploy:
     environment:
       name: github-pages
