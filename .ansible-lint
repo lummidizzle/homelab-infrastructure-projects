@@ -1,0 +1,8 @@
+exclude_paths:
+  - docs/
+warn_list: []
+skip_list:
+  - package-latest
+  - command-instead-of-module
+  - risky-shell-pipe
+  - fqcn-builtins
