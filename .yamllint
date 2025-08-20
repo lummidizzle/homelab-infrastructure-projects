@@ -1,0 +1,19 @@
+---
+# keep yamllint calm without changing behavior
+extends: default
+
+# don't lint non-code content and GH workflows
+ignore: |
+  docs/**
+  assets/**
+  .github/workflows/**
+
+rules:
+  document-start: disable          # don't force '---' at top
+  truthy: disable                  # allow yes/no as Ansible commonly uses
+  line-length:
+    max: 160
+    allow-non-breakable-words: true
+  empty-lines:
+    max: 2
+  braces: disable                  # jinja+yaml can trigger this
