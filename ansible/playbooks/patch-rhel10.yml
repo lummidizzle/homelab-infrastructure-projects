@@ -1,0 +1,56 @@
+---
+# Patch the RHEL 10 controller via RHSM (no local mirror/EPEL)
+- name: Patch RHEL 10 controller (RHSM only)
+  hosts: rhel10_controller
+  become: true
+  gather_facts: true
+
+  vars:
+    rhsm_repoids:
+      - rhel-10-for-x86_64-baseos-rpms
+      - rhel-10-for-x86_64-appstream-rpms
+      - codeready-builder-for-rhel-10-x86_64-rpms
+
+  pre_tasks:
+    - name: Make sure RHSM repos are (best-effort) enabled
+      command: subscription-manager repos --enable {{ item }}
+      loop: "{{ rhsm_repoids }}"
+      register: rhsm_enable
+      changed_when: false
+      failed_when: false
+
+    - name: Explicitly disable any EPEL on the controller (we're not using it here)
+      command: dnf config-manager --set-disabled epel epel-local epel-next epel-next-local
+      changed_when: false
+      failed_when: false
+
+    - name: Install needs-restarting tool
+      package:
+        name: dnf-utils
+        state: present
+      failed_when: false
+
+  tasks:
+    - name: Update metadata
+      dnf:
+        update_cache: yes
+
+    - name: Patch all packages to latest from RHSM repos
+      dnf:
+        name: "*"
+        state: latest
+        enablerepo: "{{ rhsm_repoids | join(',') }}"
+      register: patch_result
+
+    - name: Check if reboot is required
+      command: needs-restarting -r
+      register: reboot_check
+      failed_when: false
+      changed_when: false
+
+    - name: Reboot if kernel/glibc changes require it
+      reboot:
+        msg: "Rebooting after RHEL10 patch"
+        reboot_timeout: 1800
+      when: reboot_check.rc != 0 or patch_result is changed
+
