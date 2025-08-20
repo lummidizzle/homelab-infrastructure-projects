@@ -1,0 +1,46 @@
+name: Ansible CI (PR-only)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'ansible/**'
+      - '.yamllint'
+      - 'ansible.cfg'
+      - '.github/workflows/ci-ansible.yml'
+
+jobs:
+  lint-and-syntax:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install linters
+        run: |
+          pip install --upgrade pip
+          pip install ansible ansible-lint yamllint
+      - name: Show versions
+        run: |
+          ansible --version
+          ansible-lint --version || true
+          yamllint --version
+      - name: yamllint
+        run: yamllint .
+      - name: Ansible syntax-check (playbooks)
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for p in ansible/playbooks/*.yml; do
+            echo "::group::syntax: ${p}"
+            ansible-playbook -i 'localhost,' -c local "$p" --syntax-check
+            echo "::endgroup::"
+          done
