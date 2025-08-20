@@ -45,6 +45,11 @@ security.corp.local
 [rhel10_controller]
 ansible.corp.local
 
+[el9:children]
+el9_rhel
+el9_stream
+el9_rocky
+
 
 [infra:children]
 backup
