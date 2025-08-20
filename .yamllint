@@ -3,6 +3,11 @@ extends: default
 
 # Don’t lint docs/assets/GH workflows
 ignore: |
+  host_vars/**
+  group_vars/**
+  ansible/host_vars/**
+  ansible/group_vars/**
+  inventory/**
   docs/**
   assets/**
   .github/workflows/**
