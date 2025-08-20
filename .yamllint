@@ -1,0 +1,27 @@
+---
+extends: default
+
+# Don’t lint docs/assets/GH workflows
+ignore: |
+  host_vars/**
+  group_vars/**
+  ansible/host_vars/**
+  ansible/group_vars/**
+  inventory/**
+  docs/**
+  assets/**
+  .github/workflows/**
+
+rules:
+  document-start: disable
+  truthy: disable
+  line-length:
+    max: 200
+    allow-non-breakable-words: true
+  empty-lines:
+    max: 4
+  indentation: disable
+  hyphen-indentation: disable
+  trailing-spaces: disable
+  new-line-at-end-of-file: disable
+  braces: disable
