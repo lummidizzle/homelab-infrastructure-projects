@@ -1,4 +1,6 @@
 # AD–Linux Integration: Ansible Join & SSSD Baseline (Runbook + Proof)
+> **Download the Word version:** [Homelab AD–Linux Runbook (DOCX)](Homelab_AD-Linux_Runbook.docx)
+
 
 This doc captures **what we did** to join ~10 EL9/Rocky hosts to **CORP.LOCAL**, lock down logins with **SSSD**, and grant **controlled sudo** via the `linux-admins` AD group. It includes **copy‑paste commands**, **Ansible snippets**, and **screenshots as proof**.
 
