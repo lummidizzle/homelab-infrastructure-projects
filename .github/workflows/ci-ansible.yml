@@ -2,45 +2,45 @@ name: Ansible CI (PR-only)
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'ansible/**'
-      - '.yamllint'
-      - 'ansible.cfg'
-      - '.github/workflows/ci-ansible.yml'
+    branches: [ main ]
 
 jobs:
   lint-and-syntax:
-    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    env:
+      ANSIBLE_CONFIG: ansible/ansible.cfg
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Install linters
+          python-version: '3.11'
+
+      - name: Install Ansible + linters
         run: |
-          pip install --upgrade pip
-          pip install ansible ansible-lint yamllint
-      - name: Show versions
+          python -m pip install --upgrade pip
+          pip install "ansible-core>=2.16" "ansible-lint==24.*" yamllint
+
+      - name: Prepare vault pass (for syntax-check)
+        env:
+          ANSIBLE_VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASS }}
         run: |
-          ansible --version
-          ansible-lint --version || true
-          yamllint --version
-      - name: yamllint
-        run: yamllint .
-      - name: Ansible syntax-check (playbooks)
-        shell: bash
+          mkdir -p ~/.config/ansible
+          printf "%s" "$ANSIBLE_VAULT_PASS" > ~/.config/ansible/.vault-pass
+          chmod 600 ~/.config/ansible/.vault-pass
+
+      - name: Lint (ansible-lint)
         run: |
-          set -euo pipefail
-          shopt -s nullglob
+          ansible-lint ansible/ --exclude 'ansible/group_vars/*.vault.yml' --exclude 'ansible/docs'
+
+      - name: Syntax check all playbooks
+        run: |
+          set -e
           for p in ansible/playbooks/*.yml; do
-            echo "::group::syntax: ${p}"
-            ansible-playbook -i 'localhost,' -c local "$p" --syntax-check
+            echo "::group::Syntax check $p"
+            ansible-playbook -i ansible/inventory --syntax-check "$p"
             echo "::endgroup::"
           done
+

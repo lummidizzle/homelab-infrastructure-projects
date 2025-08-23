@@ -1,8 +1,10 @@
-exclude_paths:
-  - docs/
-warn_list: []
+profiles:
+  - production
 skip_list:
+  - experimental
   - package-latest
-  - command-instead-of-module
-  - risky-shell-pipe
+exclude_paths:
+  - ansible/docs
+  - ansible/group_vars/*.vault.yml
+warn_list:
   - fqcn-builtins
