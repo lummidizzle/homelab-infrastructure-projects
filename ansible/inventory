@@ -80,4 +80,32 @@ security.corp.local
 
 [el9_rocky]
 devops.corp.local
+dns-nfs.corp.local
+
+# all Linux servers in your lab
+[linux_fleet]
+glpi.corp.local
+ansible.corp.local
+reposync.corp.local
+dns-nfs.corp.local
+monitoring.corp.local
+backup.corp.local
+syslog.corp.local
+staging.corp.local
+devops.corp.local
+security.corp.local
+
+# targets to join AD = the whole fleet
+[ad_join_targets]
+glpi.corp.local
+ansible.corp.local
+reposync.corp.local
+dns-nfs.corp.local
+monitoring.corp.local
+backup.corp.local
+syslog.corp.local
+staging.corp.local
+devops.corp.local
+security.corp.local
+
 # If dns-nfs is Rocky, move it here too and remove from el9_stream

@@ -1,0 +1,7 @@
+# group_vars/ad_join_targets.yml
+ad_domain: corp.local                         # single source of truth
+ad_computer_ou: "OU=Linux,OU=Servers,DC=corp,DC=local"
+ad_dcs:
+  - ws2022-dc.corp.local
+ad_admin_group: "CORP\\Domain Admins"
+

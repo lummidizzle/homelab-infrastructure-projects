@@ -1,0 +1,130 @@
+---
+- name: Join Linux fleet to CORP.LOCAL (EL9 + Debian/Ubuntu)
+  hosts: ad_join_targets
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Normalize domain, DCs, OU and other inputs
+      ansible.builtin.set_fact:
+        eff_ad_domain_lower: "{{ (ad_domain | default('corp.local')) | lower }}"
+        eff_ad_domain_upper: "{{ (ad_domain | default('corp.local')) | upper }}"
+        eff_ad_dcs: >-
+          {{ (ad_dcs if (ad_dcs is defined and ad_dcs | length > 0)
+              else ['ws2022-dc.corp.local']) | list }}
+        eff_ad_computer_ou: "{{ ad_computer_ou | default('OU=Linux,OU=Servers,DC=corp,DC=local') }}"
+        eff_join_password: "{{ ad_join_password | default(vault_ad_join_password) }}"
+        eff_show_join_errors: "{{ ad_show_join_errors | default(false) }}"
+        eff_netbios: "{{ (ad_domain | default('corp.local')) | upper | regex_replace('\\..*$', '') }}"
+        eff_admin_group: "{{ ad_admin_group | default('Domain Admins') }}"
+      tags: ['always']
+
+  tasks:
+    - name: Install join prerequisites (EL9 / Rocky / RHEL)
+      ansible.builtin.package:
+        name:
+          - realmd
+          - adcli
+          - sssd
+          - sssd-tools
+          - oddjob
+          - oddjob-mkhomedir
+          - samba-common-tools
+        state: present
+      when:
+        - ansible_facts.os_family == 'RedHat'
+        - ansible_facts.distribution_major_version is version('9', '=')
+
+    - name: Install join prerequisites (Debian/Ubuntu)
+      ansible.builtin.package:
+        name:
+          - realmd
+          - adcli
+          - sssd
+          - sssd-tools
+          - oddjob
+          - oddjob-mkhomedir
+          - samba-common-bin
+        state: present
+      when: ansible_facts.os_family in ['Debian']
+
+    - name: Ensure oddjobd is running (EL9)
+      ansible.builtin.service:
+        name: oddjobd
+        state: started
+        enabled: true
+      when:
+        - ansible_facts.os_family == 'RedHat'
+        - ansible_facts.distribution_major_version is version('9', '=')
+
+    - name: Enable mkhomedir via authselect (EL9)
+      ansible.builtin.command: authselect select sssd with-mkhomedir --force
+      changed_when: "'successfully' in (authselect_result.stdout | default(''))"
+      register: authselect_result
+      when:
+        - ansible_facts.os_family == 'RedHat'
+        - ansible_facts.distribution_major_version is version('9', '=')
+
+    - name: Ensure pam_mkhomedir is present (Debian/Ubuntu)
+      ansible.builtin.lineinfile:
+        path: "{{ item }}"
+        regexp: '^\s*session\s+required\s+pam_mkhomedir.so'
+        line: 'session required pam_mkhomedir.so'
+        state: present
+        create: false
+        backrefs: false
+      loop:
+        - /etc/pam.d/common-session
+        - /etc/pam.d/common-session-noninteractive
+      when: ansible_facts.os_family in ['Debian']
+
+    - name: DNS A-record check for each DC
+      ansible.builtin.command: "dig +short {{ item }}"
+      register: dig_dc_results
+      changed_when: false
+      failed_when: false
+      loop: "{{ eff_ad_dcs }}"
+
+    - name: Assert at least one DC resolves
+      ansible.builtin.assert:
+        that:
+          - "(dig_dc_results.results | map(attribute='stdout') | map('trim') | select('!=','') | list | length) > 0"
+        success_msg: "All assertions passed"
+      when: dig_dc_results is defined
+
+    - name: Check current realm membership
+      ansible.builtin.command: realm list
+      register: realm_list
+      changed_when: false
+      failed_when: false
+
+    - name: Join the realm (adcli; OU + preferred DC)
+      ansible.builtin.command: >
+        adcli join {{ eff_ad_domain_upper }}
+        --domain-ou="{{ eff_ad_computer_ou }}"
+        --domain-controller={{ eff_ad_dcs[0] }}
+        --login-user="{{ ad_join_user | default('Administrator') }}"
+        --stdin-password
+      args:
+        stdin: "{{ eff_join_password }}"
+      no_log: "{{ not eff_show_join_errors }}"
+      when: eff_ad_domain_lower not in (realm_list.stdout | default('') | lower)
+
+    - name: Enable and start SSSD
+      ansible.builtin.service:
+        name: sssd
+        state: started
+        enabled: true
+
+    # ── ONLY CHANGE MADE: use simple replace() to escape backslashes/spaces ──
+    
+    - name: Install sudoers rule for AD admins
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/99-ad-admins
+        owner: root
+        group: root
+        mode: '0440'
+        validate: 'visudo -cf %s'
+        content: |-
+          %{{ eff_netbios }}\{{ eff_admin_group | replace(' ', '\ ') }} ALL=(ALL) ALL
+

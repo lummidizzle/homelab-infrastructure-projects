@@ -1,0 +1,128 @@
+---
+- name: Conventional Linux admin model (SSSD allow-list + sudo policy)
+  hosts: ad_join_targets
+  become: true
+  gather_facts: false
+
+  vars:
+    # Resolve the AD DNS domain once and reuse everywhere
+    ad_dns_domain: "{{ (ad_domain | default('corp.local')) | lower }}"
+    ad_realm_upper: "{{ ad_dns_domain | upper }}"
+    linux_admins_group_fq: "linux-admins@{{ ad_dns_domain }}"
+    ad_login_user: "oluadmin@{{ ad_dns_domain }}"
+
+    # Sudo policy: 'limited' (recommended) or 'all'
+    sudo_policy: "limited"
+
+    # Commands allowed when sudo_policy == 'limited'
+    sudo_cmds_pkg:
+      - /usr/bin/dnf
+      - /usr/bin/yum
+      - /usr/bin/apt
+      - /usr/bin/apt-get
+    sudo_cmds_sys:
+      - /usr/bin/systemctl
+      - /usr/bin/journalctl
+
+  pre_tasks:
+    - name: Sanity — host must be joined to {{ ad_dns_domain }}
+      ansible.builtin.command: realm list
+      register: realm_out
+      changed_when: false
+      failed_when: realm_out.rc != 0 or (ad_realm_upper not in realm_out.stdout | upper)
+
+    - name: Sanity — linux-admins must be visible from AD/SSSD
+      ansible.builtin.command: getent group "{{ linux_admins_group_fq }}"
+      register: getent_group
+      changed_when: false
+      failed_when: getent_group.rc != 0
+
+  tasks:
+    - name: Ensure SSSD access control uses simple provider
+      ansible.builtin.ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "domain/{{ ad_dns_domain }}"
+        option: access_provider
+        value: simple
+        no_extra_spaces: true
+        backup: yes
+        mode: "0600"
+        owner: root
+        group: root
+      notify: restart sssd
+
+    - name: Allow only linux-admins to log in (simple_allow_groups)
+      ansible.builtin.ini_file:
+        path: /etc/sssd/sssd.conf
+        section: "domain/{{ ad_dns_domain }}"
+        option: simple_allow_groups
+        value: "{{ linux_admins_group_fq }}"
+        no_extra_spaces: true
+        backup: yes
+        mode: "0600"
+        owner: root
+        group: root
+      notify: restart sssd
+
+    - name: Ensure sssd is enabled and running
+      ansible.builtin.service:
+        name: sssd
+        enabled: true
+        state: started
+
+    - name: Install sudoers drop-in for linux-admins
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/99-linux-admins
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+        content: |
+          {% if sudo_policy == 'all' -%}
+          # Passwordless full sudo for linux-admins (convenience; not recommended for prod)
+          %{{ linux_admins_group_fq }} ALL=(ALL:ALL) NOPASSWD: ALL
+          {% else -%}
+          # Minimal passwordless admin for linux-admins
+          Cmnd_Alias PKG = {{ sudo_cmds_pkg | join(', ') }}
+          Cmnd_Alias SYS = {{ sudo_cmds_sys | join(', ') }}
+          %{{ linux_admins_group_fq }} ALL=(ALL:ALL) NOPASSWD: PKG, SYS
+          {% endif -%}
+
+    # -------- Verification --------
+    - name: Verify SSSD is active
+      ansible.builtin.command: systemctl is-active sssd
+      register: sssd_active
+      changed_when: false
+
+    - name: Verify realm summary
+      ansible.builtin.shell: |
+        realm list | awk 'NR==1,/^$/' | sed 's/^/  /'
+      register: realm_brief
+      changed_when: false
+
+    - name: Verify sudo sees the AD user and policy
+      ansible.builtin.shell: |
+        sudo -lU "{{ ad_login_user }}" | head -n 20
+      register: sudo_l
+      changed_when: false
+
+    - name: Quick non-interactive sudo smoke test
+      ansible.builtin.shell: sudo -n true && echo SUDO_OK || echo SUDO_FAIL
+      register: sudo_smoke
+      changed_when: false
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "{{ inventory_hostname }} OK"
+          - "  SSSD: {{ sssd_active.stdout }}"
+          - "  Realm:\n{{ realm_brief.stdout }}"
+          - "  sudo -l (first lines):\n{{ sudo_l.stdout }}"
+          - "  Smoke: {{ sudo_smoke.stdout }}"
+
+  handlers:
+    - name: restart sssd
+      ansible.builtin.service:
+        name: sssd
+        state: restarted
+

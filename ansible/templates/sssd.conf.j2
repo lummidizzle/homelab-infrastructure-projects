@@ -1,0 +1,23 @@
+[sssd]
+services = nss, pam, sudo, ssh
+config_file_version = 2
+domains = {{ ad_domain_lower }}
+
+[domain/{{ ad_domain_lower }}]
+ad_domain = {{ ad_domain_lower }}
+krb5_realm = {{ ad_realm }}
+realmd_tags = manages-system joined-with-adcli
+cache_credentials = True
+id_provider = ad
+access_provider = ad
+ad_gpo_access_control = permissive
+use_fully_qualified_names = {{ sssd_use_fqdn | ternary('True','False') }}
+fallback_homedir = {{ sssd_fallback_home }}
+default_shell = {{ sssd_shell }}
+# reasonable defaults
+dns_discovery_domain = {{ ad_domain_lower }}
+ldap_id_mapping = True
+dyndns_update = False
+cache_credentials = True
+override_space = _
+
