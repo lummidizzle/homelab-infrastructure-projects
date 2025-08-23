@@ -1,7 +1,4 @@
-profiles:
-  - production
 skip_list:
-  - experimental
   - package-latest
 exclude_paths:
   - ansible/docs
