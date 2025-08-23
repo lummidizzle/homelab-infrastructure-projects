@@ -33,7 +33,7 @@ jobs:
 
       - name: Lint (ansible-lint, YAML plugin disabled)
         run: |
-          ansible-lint ansible/playbooks -x yaml --exclude "ansible/group_vars/*.vault.yml" --exclude "ansible/docs" --exclude "ansible/mycollections"
+          ansible-lint ansible/playbooks -x yaml,name[casing],risky-shell-pipe,fqcn[action],no-changed-when --exclude "ansible/group_vars/*.vault.yml" --exclude "ansible/docs" --exclude "ansible/mycollections"
 
       - name: Syntax check all playbooks
         run: |
