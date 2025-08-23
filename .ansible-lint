@@ -3,5 +3,6 @@ skip_list:
 exclude_paths:
   - ansible/docs
   - ansible/group_vars/*.vault.yml
+  - ansible/mycollections
 warn_list:
   - fqcn-builtins
