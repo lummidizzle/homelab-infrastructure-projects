@@ -18,12 +18,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Ansible + linters
+      - name: Install Ansible + linters (pinned)
         run: |
-          python -m pip install "ansible-core==2.15.*" "ansible-lint==6.*" yamllint
-          pip install "ansible-core==2.15.*" "ansible-lint==6.*" yamllint
+          python -m pip install --upgrade pip
+          pip install "ansible-core==2.15.*" "ansible-lint==6.*"
 
-      - name: Prepare vault pass (for syntax-check)
+      - name: Prepare vault pass
         env:
           ANSIBLE_VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASS }}
         run: |
@@ -31,9 +31,9 @@ jobs:
           printf "%s" "$ANSIBLE_VAULT_PASS" > ~/.config/ansible/.vault-pass
           chmod 600 ~/.config/ansible/.vault-pass
 
-      - name: Lint (ansible-lint)
+      - name: Lint (ansible-lint, YAML plugin disabled)
         run: |
-          ansible-lint ansible/ -x yaml --exclude "ansible/group_vars/*.vault.yml" --exclude "ansible/docs"
+          ansible-lint ansible/ -x yaml --exclude 'ansible/group_vars/*.vault.yml' --exclude 'ansible/docs'
 
       - name: Syntax check all playbooks
         run: |
@@ -43,4 +43,3 @@ jobs:
             ansible-playbook -i ansible/inventory --syntax-check "$p"
             echo "::endgroup::"
           done
-
