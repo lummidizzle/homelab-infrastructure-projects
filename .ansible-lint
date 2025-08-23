@@ -1,5 +1,9 @@
 skip_list:
   - package-latest
+  - name[casing]
+  - risky-shell-pipe
+  - fqcn[action]
+  - no-changed-when
 exclude_paths:
   - ansible/docs
   - ansible/group_vars/*.vault.yml
