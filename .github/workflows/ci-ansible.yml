@@ -20,8 +20,8 @@ jobs:
 
       - name: Install Ansible + linters
         run: |
-          python -m pip install --upgrade pip
-          pip install "ansible-core>=2.16" "ansible-lint==24.*" yamllint
+          python -m pip install "ansible-core==2.15.*" "ansible-lint==6.*" yamllint
+          pip install "ansible-core==2.15.*" "ansible-lint==6.*" yamllint
 
       - name: Prepare vault pass (for syntax-check)
         env:
