@@ -1,0 +1,4 @@
+
+# misc
+.github/workflows/*.bak
+ansible/1/
