@@ -3,18 +3,14 @@
 
 Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using real-world tools, enterprise practices, and hands-on automation.
 
-### 🆕 Featured update: AD ↔ Linux Integration Runbook
+### ⭐ Featured update: AD ↔ Linux Integration Runbook
 
-**Read the step-by-step guide:** [ansible/docs/ad-linux-integration/README.md](ansible/docs/ad-linux-integration/README.md)  
-**Download (DOCX):** [Homelab_AD–Linux_Runbook.docx](ansible/docs/ad-linux-integration/Homelab_AD-Linux_Runbook.docx)
+**Read the step-by-step guide:** [`ansible/docs/ad-linux-integration/README.md`](ansible/docs/ad-linux-integration/README.md)  
+**Download (DOCX):** [`Homelab_AD–Linux_Runbook.docx`](ansible/docs/ad-linux-integration/Homelab_AD–Linux_Runbook.docx)
 
+[![main last commit](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects/main?label=main%20last%20commit)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
 
-[![Last commit (main)](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects/main?label=main%20last%20commit)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
-[![Last commit (work)](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects/chore/ci-pr-only?label=work%20branch%20last%20commit)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/chore/ci-pr-only)
-[![PR #8 checks](https://img.shields.io/github/checks-status/lummidizzle/homelab-infrastructure-projects/8?label=PR%20%238%20checks)](https://github.com/lummidizzle/homelab-infrastructure-projects/pull/8)
-
-**See today’s changes:**  
-https://github.com/lummidizzle/homelab-infrastructure-projects/compare/main...chore/ci-pr-only
+**See recent changes:** https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main
 
 
 🔗 **Live Demo (GitHub Pages):** [View Documentation](https://lummidizzle.github.io/homelab-infrastructure-projects/)
