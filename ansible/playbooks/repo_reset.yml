@@ -1,0 +1,95 @@
+---
+- name: Point Rocky 9 hosts to the internal mirror
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    # Root of your mirror for Rocky 9 content
+    mirror_root: "http://192.168.1.13/centos-stream/9"
+    repo_file: "/etc/yum.repos.d/internal-el9.repo"
+
+    # Internal repos to manage (enable CRB only if you actually mirror it)
+    repos:
+      - { id: "internal-baseos",    name: "Internal BaseOS",    subpath: "baseos",    enabled: true  }
+      - { id: "internal-appstream", name: "Internal AppStream", subpath: "appstream", enabled: true  }
+      - { id: "internal-crb",       name: "Internal CRB",       subpath: "crb",       enabled: false }
+
+  pre_tasks:
+    - name: Skip anything that is not Rocky 9
+      assert:
+        that:
+          - ansible_distribution == "Rocky"
+          - ansible_distribution_major_version | int == 9
+        fail_msg: "Not Rocky 9 → skipping this host."
+        success_msg: "This host is Rocky 9."
+      changed_when: false
+      register: rocky_ok
+      ignore_errors: true
+
+    - meta: end_host
+      when: rocky_ok is failed
+
+  tasks:
+    - name: Sanity check mirror has repodata for enabled repos
+      uri:
+        url: "{{ mirror_root }}/{{ item.subpath }}/repodata/repomd.xml"
+        method: HEAD
+        status_code: 200
+        return_content: no
+        timeout: 10
+      loop: "{{ repos | selectattr('enabled') | list }}"
+      register: mirror_checks
+
+    - name: Fail early if the mirror is missing anything
+      fail:
+        msg: "Mirror missing {{ item.item.id }} at {{ mirror_root }}/{{ item.item.subpath }}/repodata/repomd.xml (HTTP {{ item.status }})"
+      when: item.status | default(0) != 200
+      loop: "{{ mirror_checks.results }}"
+
+    - name: Write one clean repo file pointing to the mirror
+      copy:
+        dest: "{{ repo_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          {% for r in repos %}
+          [{{ r.id }}]
+          name={{ r.name }}
+          baseurl={{ mirror_root }}/{{ r.subpath }}
+          enabled={{ (r.enabled | default(true)) | ternary('1','0') }}
+          gpgcheck=0
+          priority=10
+          module_hotfixes=1
+          skip_if_unavailable=1
+
+          {% endfor %}
+
+    - name: Disable upstream Rocky repos (leave epel and others alone)
+      ansible.builtin.shell: >
+        dnf -q config-manager --set-disabled rocky* baseos appstream extras crb
+      register: disable_upstream
+      failed_when: false
+
+    - name: Enable the internal repos we just wrote
+      ansible.builtin.shell: >
+        dnf -q config-manager --set-enabled {{ repos | selectattr('enabled') | map(attribute='id') | join(' ') }}
+      register: enable_internal
+
+    - name: Rebuild the metadata cache
+      ansible.builtin.shell: |
+        rm -rf /var/cache/dnf/* /var/cache/yum/* || true
+        dnf -y clean all
+        dnf -y makecache
+      register: makecache_out
+
+    - name: Show baseurls & enabled state for confirmation
+      ansible.builtin.shell: >
+        dnf -q repoinfo {{ repos | map(attribute='id') | join(' ') }} | egrep 'Repo-baseurl|Enabled'
+      register: repoinfo_out
+      changed_when: false
+
+    - debug:
+        var: repoinfo_out.stdout_lines
+

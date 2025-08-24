@@ -1,0 +1,114 @@
+---
+- name: Linux — sudo for linux-admins + post-join verification
+  hosts: ad_join_targets        # or the specific hosts you want
+  become: true
+  gather_facts: false
+
+  vars:
+    ad_domain: "corp.local"
+    ad_group_name: "linux-admins"
+    ad_test_user: "oluadmin"    # who to validate with (must exist in AD)
+
+  tasks:
+    # ---- SUDOERS CONFIG ----
+    - name: Ensure /etc/sudoers includes /etc/sudoers.d
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        regexp: '^#includedir\s+/etc/sudoers\.d'
+        line: '#includedir /etc/sudoers.d'
+        state: present
+        validate: 'visudo -cf %s'
+
+    - name: Drop sudoers rule for linux-admins@corp.local
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/90-linux-admins
+        owner: root
+        group: root
+        mode: '0440'
+        validate: 'visudo -cf %s'
+        content: |
+          %{{ ad_group_name }}@{{ ad_domain }} ALL=(ALL) NOPASSWD:ALL
+
+    # ---- SSSD HEALTH ----
+    - name: Ensure SSSD is started and enabled
+      ansible.builtin.service:
+        name: sssd
+        state: started
+        enabled: yes
+
+    - name: Flush SSSD caches (safe anytime)
+      ansible.builtin.command: sss_cache -E
+      changed_when: false
+
+    # ---- VERIFICATION (what you were doing by hand) ----
+    - name: realm list
+      ansible.builtin.shell: realm list
+      register: realm_list
+      changed_when: false
+
+    - name: Assert the host shows a joined realm
+      ansible.builtin.assert:
+        that:
+          - realm_list.stdout | length > 0
+        fail_msg: "realm list returned empty output (host not joined or SSSD misconfigured)."
+
+    - name: Check SSSD state
+      ansible.builtin.shell: |
+        echo -n "sssd: "; systemctl is-active sssd ; systemctl is-enabled sssd
+      register: sssd_state
+      changed_when: false
+
+    - name: Assert SSSD active/enabled
+      ansible.builtin.assert:
+        that:
+          - "'active' in sssd_state.stdout"
+          - "'enabled' in sssd_state.stdout"
+        fail_msg: "SSSD is not active and enabled."
+
+    - name: Keytab quick check (root-only)
+      ansible.builtin.shell: klist -k | head -n 3
+      register: klist_out
+      changed_when: false
+
+    - name: getent group linux-admins@corp.local
+      ansible.builtin.shell: getent group "{{ ad_group_name }}@{{ ad_domain }}" || true
+      register: getent_group
+      changed_when: false
+
+    - name: Assert AD group resolves via NSS
+      ansible.builtin.assert:
+        that: getent_group.stdout is search("{{ ad_group_name }}")
+        fail_msg: "getent group did not return {{ ad_group_name }}@{{ ad_domain }}."
+
+    - name: getent passwd for test user
+      ansible.builtin.shell: getent passwd "{{ ad_test_user }}@{{ ad_domain }}" || true
+      register: getent_user
+      changed_when: false
+
+    - name: Assert AD user resolves via NSS
+      ansible.builtin.assert:
+        that: getent_user.stdout is search("{{ ad_test_user }}")
+        fail_msg: "getent passwd did not return {{ ad_test_user }}@{{ ad_domain }}."
+
+    - name: sudo -l for test user (should NOT say 'not allowed')
+      ansible.builtin.shell: "sudo -l -U '{{ ad_test_user }}@{{ ad_domain }}' | head -n 20"
+      register: sudo_l
+      changed_when: false
+
+    - name: Assert sudo grants rights to test user
+      ansible.builtin.assert:
+        that:
+          - sudo_l.stdout is not search("not allowed")
+        fail_msg: "Sudo denies {{ ad_test_user }}@{{ ad_domain }}. Check the drop-in and SSSD."
+
+    # Optional: quick, readable summary
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "{{ inventory_hostname }} OK"
+          - "Realm:       {{ (realm_list.stdout_lines | default([])) | join(' ') | regex_search('^\\s*realm-name:\\s*(\\S+)', '\\1') | default('N/A') }}"
+          - "SSSD state:  {{ sssd_state.stdout | replace('\n',' ') }}"
+          - "Group seen:  {{ getent_group.stdout | trim | default('NO') }}"
+          - "User seen:   {{ getent_user.stdout | trim | default('NO') }}"
+          - "sudo -l head:\n{{ sudo_l.stdout }}"
+

@@ -3,7 +3,7 @@
 - name: Guarded patch (repo allowlist + rehearsal + optional apply)
   hosts: "el9_*"
   become: true
-  gather_facts: false
+  gather_facts: true
 
   vars:
     # Default allowlists (used if you don't override in group_vars)

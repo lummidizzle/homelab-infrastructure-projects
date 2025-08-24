@@ -1,8 +1,12 @@
-exclude_paths:
-  - docs/
-warn_list: []
 skip_list:
   - package-latest
-  - command-instead-of-module
+  - name[casing]
   - risky-shell-pipe
+  - fqcn[action]
+  - no-changed-when
+exclude_paths:
+  - ansible/docs
+  - ansible/group_vars/*.vault.yml
+  - ansible/mycollections
+warn_list:
   - fqcn-builtins

@@ -4,8 +4,10 @@
 Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using real-world tools, enterprise practices, and hands-on automation.
 
 ### 🆕 Featured update: AD ↔ Linux Integration Runbook
-**Read the step-by-step guide:** [`ansible/docs/ad-linux-integration/README.md`](https://github.com/lummidizzle/homelab-infrastructure-projects/blob/chore/ci-pr-only/ansible/docs/ad-linux-integration/README.md)  
-**Download (DOCX):** [`Homelab_AD-Linux_Runbook.docx`](https://github.com/lummidizzle/homelab-infrastructure-projects/raw/chore/ci-pr-only/ansible/docs/ad-linux-integration/Homelab_AD-Linux_Runbook.docx)
+
+**Read the step-by-step guide:** [ansible/docs/ad-linux-integration/README.md](ansible/docs/ad-linux-integration/README.md)  
+**Download (DOCX):** [Homelab_AD–Linux_Runbook.docx](ansible/docs/ad-linux-integration/Homelab_AD-Linux_Runbook.docx)
+
 
 [![Last commit (main)](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects/main?label=main%20last%20commit)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
 [![Last commit (work)](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects/chore/ci-pr-only?label=work%20branch%20last%20commit)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/chore/ci-pr-only)
