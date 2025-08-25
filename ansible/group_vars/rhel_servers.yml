@@ -1,2 +1,10 @@
 # Default profile for this group (RHEL/Rocky 9 using your local mirror)
 repo_profile: rhel_9
+
+# OS-family specifics (safe to add under the existing key)
+package_mgr: dnf
+wheel_group: wheel
+firewall_service: firewalld
+audit_pkg: audit
+aide_pkg: aide
+

@@ -1,0 +1,11 @@
+ansible_become: true
+admin_user: oluadmin
+timezone: America/Chicago
+
+common_packages:
+  - vim
+  - curl
+  - wget
+  - git
+  - chrony
+

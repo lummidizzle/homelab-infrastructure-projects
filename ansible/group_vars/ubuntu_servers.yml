@@ -1,0 +1,5 @@
+package_mgr: apt
+wheel_group: sudo
+firewall_service: ufw
+audit_pkg: auditd
+aide_pkg: aide

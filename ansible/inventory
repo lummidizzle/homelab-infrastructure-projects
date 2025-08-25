@@ -82,6 +82,13 @@ security.corp.local
 devops.corp.local
 dns-nfs.corp.local
 
+[linux:children]
+ubuntu_servers
+rhel_servers
+
+[redhat_like:children]
+rhel_servers
+
 # all Linux servers in your lab
 [linux_fleet]
 glpi.corp.local
