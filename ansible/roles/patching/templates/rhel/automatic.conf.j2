@@ -1,0 +1,16 @@
+# Managed by Ansible
+[commands]
+# security-only upgrades
+upgrade_type = security
+random_sleep = 300
+download_updates = yes
+apply_updates = yes
+
+[emitters]
+# quiet by default; flip to "email" and set email_to if you want mail
+emit_via = motd
+system_name = {{ inventory_hostname }}
+
+[base]
+# leave defaults sane
+

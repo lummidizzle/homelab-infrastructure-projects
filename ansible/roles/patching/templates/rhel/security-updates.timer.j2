@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule security updates (fallback)
+
+[Timer]
+OnCalendar={{ patching_rhel_oncalendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+

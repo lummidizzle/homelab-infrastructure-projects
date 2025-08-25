@@ -1,0 +1,110 @@
+---
+# Ensure a weekly security-update timer on EL9 clients.
+# If dnf-automatic.timer exists, use it; otherwise install a lightweight
+# fallback timer (security-updates.timer) that runs: dnf -y --security upgrade
+
+- name: EL9 clients | patching timer
+  hosts: el9_rocky:el9_stream
+  become: true
+  gather_facts: true
+
+  vars:
+    # Sunday 03:00 local time
+    patch_window: 'Sun *-*-* 03:00:00'
+
+  tasks:
+    - name: Collect service facts (to detect native dnf-automatic.timer)
+      service_facts:
+
+    # --- Native timer path ---------------------------------------------------
+    - name: Create override dir for dnf-automatic.timer
+      file:
+        path: /etc/systemd/system/dnf-automatic.timer.d
+        state: directory
+        mode: '0755'
+      when: "'dnf-automatic.timer' in ansible_facts.services"
+
+    - name: Set schedule override for dnf-automatic.timer
+      copy:
+        dest: /etc/systemd/system/dnf-automatic.timer.d/override.conf
+        mode: '0644'
+        content: |
+          [Timer]
+          OnCalendar={{ patch_window }}
+          RandomizedDelaySec=0
+          Persistent=true
+      register: dnf_override
+      when: "'dnf-automatic.timer' in ansible_facts.services"
+
+    - name: daemon-reload if override changed (dnf-automatic)
+      command: systemctl daemon-reload
+      when: dnf_override is changed
+
+    - name: Enable/start dnf-automatic.timer
+      systemd:
+        name: dnf-automatic.timer
+        enabled: true
+        state: started
+      when: "'dnf-automatic.timer' in ansible_facts.services"
+
+    # --- Fallback timer path -------------------------------------------------
+    - name: Install fallback security-updates.service (oneshot dnf security upgrade)
+      copy:
+        dest: /etc/systemd/system/security-updates.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Apply security updates using dnf
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/dnf -y --security upgrade
+      when: "'dnf-automatic.timer' not in ansible_facts.services"
+
+    - name: Install fallback security-updates.timer (weekly schedule)
+      copy:
+        dest: /etc/systemd/system/security-updates.timer
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Schedule security updates (fallback)
+
+          [Timer]
+          OnCalendar={{ patch_window }}
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+      register: fb_unit
+      when: "'dnf-automatic.timer' not in ansible_facts.services"
+
+    - name: daemon-reload if fallback unit changed
+      command: systemctl daemon-reload
+      when: fb_unit is changed
+
+    - name: Enable/start fallback timer when native one is absent
+      systemd:
+        name: security-updates.timer
+        enabled: true
+        state: started
+      when: "'dnf-automatic.timer' not in ansible_facts.services"
+
+    # --- Avoid double-running ------------------------------------------------
+    - name: If native timer is enabled, ensure fallback is disabled
+      systemd:
+        name: security-updates.timer
+        enabled: false
+        state: stopped
+      when: "'dnf-automatic.timer' in ansible_facts.services"
+
+    # --- Visibility ----------------------------------------------------------
+    - name: Show timers (for logs)
+      shell: |
+        systemctl list-timers --all | egrep "dnf(5)?-automatic|security-updates" || true
+      register: timers
+      changed_when: false
+
+    - debug:
+        var: timers.stdout_lines

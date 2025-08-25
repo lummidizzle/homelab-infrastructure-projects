@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply security updates using {{ _dnf_cmd }}
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/{{ _dnf_cmd }} -y --security upgrade
+

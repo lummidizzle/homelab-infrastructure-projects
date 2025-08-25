@@ -1,0 +1,73 @@
+---
+- name: EL9 clients | repo housekeeping + makecache
+  hosts: "el9_rocky:el9_stream"
+  become: true
+  gather_facts: true
+
+  vars:
+    repo_dir: /etc/yum.repos.d
+    keep_repo_files:
+      - corp-local.repo
+      - epel-local.repo
+      - internal-el9.repo
+
+  tasks:
+    - name: Ensure backup directory exists
+      ansible.builtin.file:
+        path: "{{ repo_dir }}/backup-{{ ansible_date_time.date }}"
+        state: directory
+        mode: "0755"
+
+    - name: List current .repo files
+      ansible.builtin.find:
+        paths: "{{ repo_dir }}"
+        patterns: "*.repo"
+        file_type: file
+      register: repo_files
+
+    - name: Build absolute keep list
+      ansible.builtin.set_fact:
+        keep_paths: "{{ keep_repo_files | map('regex_replace','^', repo_dir + '/') | list }}"
+
+    - name: Compute non-keep repo files
+      ansible.builtin.set_fact:
+        files_to_move: "{{ repo_files.files | map(attribute='path') | list | difference(keep_paths) }}"
+
+    - name: Move non-keep .repo files into backup (idempotent)
+      ansible.builtin.command:
+        cmd: "mv -n {{ item }} {{ repo_dir }}/backup-{{ ansible_date_time.date }}/"
+      loop: "{{ files_to_move }}"
+      when: files_to_move | length > 0
+
+    - name: Restore SELinux contexts on repo dir (safe if SELinux absent)
+      ansible.builtin.shell: "restorecon -Rv {{ repo_dir }} || true"
+      changed_when: false
+
+    - name: Show what remains at top level
+      ansible.builtin.shell: "ls -1 {{ repo_dir }}/*.repo || true"
+      register: remaining_repos
+      changed_when: false
+
+    - name: Print remaining .repo files
+      ansible.builtin.debug:
+        var: remaining_repos.stdout_lines
+
+    - name: dnf clean all
+      ansible.builtin.shell: "dnf -y clean all"
+      args:
+        warn: false
+
+    - name: Rebuild cache using ONLY local repos
+      ansible.builtin.shell: >
+        dnf --disablerepo="*" --enablerepo=baseos-local,appstream-local,crb-local makecache
+      args:
+        warn: false
+
+    - name: Show enabled repos (for logs)
+      ansible.builtin.shell: "dnf repolist --enabled"
+      register: repolist
+      changed_when: false
+
+    - name: Print enabled repos
+      ansible.builtin.debug:
+        var: repolist.stdout_lines

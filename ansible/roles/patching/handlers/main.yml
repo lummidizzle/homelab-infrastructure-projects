@@ -1,0 +1,5 @@
+---
+# roles/patching/handlers/main.yml
+- name: Reload systemd
+  ansible.builtin.command: systemctl daemon-reload
+

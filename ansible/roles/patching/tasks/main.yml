@@ -1,0 +1,176 @@
+---
+# roles/patching/tasks/main.yml
+
+# ----- Debian/Ubuntu: unattended-upgrades -----
+- name: Install unattended-upgrades (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - unattended-upgrades
+      - apt-listchanges
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+  tags: [patching]
+
+- name: Configure 50unattended-upgrades
+  ansible.builtin.template:
+    src: ubuntu/50unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == "Debian"
+  tags: [patching]
+
+- name: Configure 20auto-upgrades
+  ansible.builtin.template:
+    src: ubuntu/20auto-upgrades.j2
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_os_family == "Debian"
+  tags: [patching]
+
+- name: Ensure apt timers are enabled (Debian/Ubuntu)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+  when: ansible_os_family == "Debian"
+  tags: [patching]
+
+# ----- RHEL/Rocky/Alma: native if unit exists, else fallback -----
+- name: Compute DNF flavor facts (RHEL family)
+  ansible.builtin.set_fact:
+    _rhel_major: "{{ ansible_distribution_major_version | int }}"
+    _dnf_cmd: "{{ 'dnf5' if (ansible_distribution_major_version | int) >= 10 else 'dnf' }}"
+    _dnf_timer_name: "{{ 'dnf5-automatic.timer' if (ansible_distribution_major_version | int) >= 10 else 'dnf-automatic.timer' }}"
+    _dnf_auto_pkg: "{{ 'dnf5-automatic' if (ansible_distribution_major_version | int) >= 10 else 'dnf-automatic' }}"
+  when: ansible_os_family == "RedHat"
+  tags: [patching]
+
+- name: Ensure dnf-plugins-core (harmless if present)
+  ansible.builtin.package:
+    name: dnf-plugins-core
+    state: present
+  when: ansible_os_family == "RedHat"
+  tags: [patching]
+
+# Try installing native package but do not fail if missing in repos
+- name: Try to install {{ _dnf_auto_pkg }}
+  ansible.builtin.package:
+    name: "{{ _dnf_auto_pkg }}"
+    state: present
+  register: _auto_pkg_install
+  failed_when: false
+  when: ansible_os_family == "RedHat"
+  tags: [patching]
+
+- name: Check if {{ _dnf_auto_pkg }} is installed
+  ansible.builtin.command: "rpm -q {{ _dnf_auto_pkg }}"
+  register: _auto_rpm_q
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "RedHat"
+  tags: [patching]
+
+# <<< NEW: check the actual systemd timer file >>>
+- name: Detect native automatic timer unit
+  ansible.builtin.stat:
+    path: "/usr/lib/systemd/system/{{ _dnf_timer_name }}"
+  register: _native_timer_unit
+  when: ansible_os_family == "RedHat"
+  tags: [patching]
+
+- name: Decide if we have a usable native timer
+  ansible.builtin.set_fact:
+    _have_native_timer: "{{ (_auto_rpm_q.rc == 0) and (_native_timer_unit.stat.exists | default(false)) }}"
+  when: ansible_os_family == "RedHat"
+  tags: [patching]
+
+# --- Native path (only when _have_native_timer is true) ---
+- name: Drop /etc/dnf/automatic.conf
+  ansible.builtin.template:
+    src: rhel/automatic.conf.j2
+    dest: /etc/dnf/automatic.conf
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and _have_native_timer
+  tags: [patching]
+
+- name: Create systemd override dir for DNF timer
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _dnf_timer_name }}.d"
+    state: directory
+    mode: '0755'
+  when: ansible_os_family == "RedHat" and _have_native_timer
+  tags: [patching]
+
+- name: Write systemd override to schedule weekly patch window
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ _dnf_timer_name }}.d/override.conf"
+    mode: '0644'
+    content: |
+      [Timer]
+      OnCalendar=
+      OnCalendar={{ patching_rhel_oncalendar }}
+      RandomizedDelaySec=0
+      Persistent=true
+  when: ansible_os_family == "RedHat" and _have_native_timer
+  notify: Reload systemd
+  tags: [patching]
+
+- name: Enable + start DNF automatic timer
+  ansible.builtin.systemd:
+    name: "{{ _dnf_timer_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: ansible_os_family == "RedHat" and _have_native_timer
+  tags: [patching]
+
+# --- Fallback path (when native timer/unit missing) ---
+- name: Drop fallback security-updates.service
+  ansible.builtin.template:
+    src: rhel/security-updates.service.j2
+    dest: /etc/systemd/system/security-updates.service
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and not _have_native_timer
+  tags: [patching]
+
+# --- Fallback path (when native timer/unit missing) ---
+- name: Drop fallback security-updates.service
+  ansible.builtin.template:
+    src: rhel/security-updates.service.j2
+    dest: /etc/systemd/system/security-updates.service
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and not _have_native_timer
+  tags: [patching]
+
+- name: Drop fallback security-updates.timer
+  ansible.builtin.template:
+    src: rhel/security-updates.timer.j2
+    dest: /etc/systemd/system/security-updates.timer
+    mode: '0644'
+  when: ansible_os_family == "RedHat" and not _have_native_timer
+  tags: [patching]
+
+- name: Reload systemd units (fallback)
+  ansible.builtin.command: systemctl daemon-reload
+  changed_when: false
+  when: ansible_os_family == "RedHat" and not _have_native_timer
+  tags: [patching]
+
+- name: Enable + start fallback timer (robust)
+  ansible.builtin.shell: |
+    set -e
+    systemctl daemon-reload
+    systemctl enable --now security-updates.timer
+  args:
+    executable: /bin/bash
+  when: ansible_os_family == "RedHat" and not _have_native_timer
+  tags: [patching]
+

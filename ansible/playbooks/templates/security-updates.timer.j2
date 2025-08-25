@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule security updates (fallback)
+
+[Timer]
+OnCalendar={{ patch_window }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

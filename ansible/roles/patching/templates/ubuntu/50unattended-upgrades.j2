@@ -1,0 +1,13 @@
+// Managed by Ansible
+Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}-security";
+        "${distro_idESMApps}:${distro_codename}-apps-security";
+//      "${distro_id}:${distro_codename}-updates";  // uncomment if you want all updates
+};
+
+Unattended-Upgrade::Automatic-Reboot "{{ patching_auto_reboot | ternary("true","false") }}";
+Unattended-Upgrade::Automatic-Reboot-Time "{{ patching_reboot_time }}";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+Unattended-Upgrade::MinimalSteps "true";
+

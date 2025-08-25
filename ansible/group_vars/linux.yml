@@ -8,4 +8,11 @@ common_packages:
   - wget
   - git
   - chrony
+# --- Automated patching controls ---
+patching_auto_reboot: false        # Ubuntu only (safe default = no midnight surprises)
+patching_reboot_time: "03:30"      # if auto reboot is enabled
+
+# RHEL/Rocky weekly schedule (systemd OnCalendar format)
+# Run early Sunday morning local time:
+patching_rhel_oncalendar: "Sun *-*-* 03:00:00"
 

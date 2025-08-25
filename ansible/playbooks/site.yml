@@ -135,6 +135,14 @@
   become: yes
   roles: [common]
   tags: [common]
+# -------------------------------
+# 2b) Automated security patching
+# -------------------------------
+- name: Configure automated security patching
+  hosts: linux
+  become: yes
+  roles: [patching]
+  tags: [patching]
 
 # -------------------------------
 # 3) Security Hardening
