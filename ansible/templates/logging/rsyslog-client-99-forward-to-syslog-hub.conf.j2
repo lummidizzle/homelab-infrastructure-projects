@@ -1,0 +1,10 @@
+global(preserveFQDN="on")
+module(load="omfwd")
+
+*.* action(type="omfwd"
+          target="syslog.corp.local"
+          port="514"
+          protocol="tcp"
+          KeepAlive="on"
+          Action.ResumeRetryCount="-1"
+          queue.type="LinkedList" queue.size="10000")
