@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+find /var/log/corp -type f -name "*-20*.log" -mtime +7 ! -name "*.gz" -exec gzip -f {} \;

@@ -1,0 +1,14 @@
+/var/log/corp/*/*.log {
+  daily
+  rotate 45
+  missingok
+  notifempty
+  dateext
+  dateformat -%Y%m%d
+  nocompress
+  create 0640 syslog adm
+  sharedscripts
+  postrotate
+    systemctl reload rsyslog >/dev/null 2>&1 || true
+  endscript
+}

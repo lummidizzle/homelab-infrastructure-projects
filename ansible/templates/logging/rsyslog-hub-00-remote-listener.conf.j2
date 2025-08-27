@@ -1,0 +1,14 @@
+global(preserveFQDN="on")
+module(load="imtcp")
+
+template(name="PerHostPkg" type="string"
+         string="/var/log/corp/%hostname%/%syslogfacility-text%.log")
+
+ruleset(name="perHost") {
+  action(type="omfile" dynaFile="PerHostPkg"
+         createDirs="on" dirCreateMode="2770"
+         fileOwner="syslog" fileGroup="adm" fileCreateMode="0640")
+  stop
+}
+
+input(type="imtcp" port="514" ruleset="perHost")
