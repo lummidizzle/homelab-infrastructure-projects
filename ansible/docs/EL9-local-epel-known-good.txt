@@ -1,0 +1,11 @@
+EL9 LOCAL EPEL — KNOWN GOOD
+Server URL:
+  http://reposync.corp.local/repos/el9/epel/9/Everything/x86_64/
+Health check:
+  curl -I http://reposync.corp.local/repos/el9/epel/9/Everything/x86_64/repodata/repomd.xml  # expect 200 OK
+Promotion (staging → live):
+  rsync -a --delete --delay-updates /mnt/hp2-repo/.staging/epel9/ /mnt/hp2-repo/repos/el9/epel/9/Everything/x86_64/
+Nightly sync:
+  /usr/local/sbin/sync-epel.sh @ 03:00 via /etc/cron.d/sync-epel
+Client repo file:
+  /etc/yum.repos.d/local-epel.repo  (immutable with chattr +i)
