@@ -1,0 +1,85 @@
+---
+- name: Install & configure NRPE agent on Linux
+  hosts: linux_fleet
+  become: true
+  vars:
+    monitoring_ip: 192.168.1.15            # monitoring.corp.local
+    epel_id: epel-local                    # set to your internal EPEL repo id
+    rhel_plugins:
+      - nagios-plugins-load
+      - nagios-plugins-disk
+      - nagios-plugins-procs
+      - nagios-plugins-ping
+      - nagios-plugins-tcp
+      - nagios-plugins-http
+    nrpe_conf_dir_el: /etc/nagios
+    nrpe_conf_dir_deb: /etc/nagios
+
+  tasks:
+  - name: Debian/Ubuntu | install NRPE + plugins
+    apt:
+      name:
+        - nagios-nrpe-server
+        - monitoring-plugins-basic
+        - monitoring-plugins-standard
+      state: present
+      update_cache: yes
+    when: ansible_os_family == "Debian"
+
+  - name: Debian/Ubuntu | drop NRPE config
+    copy:
+      dest: "{{ nrpe_conf_dir_deb }}/nrpe.d/corp.cfg"
+      content: |
+        allowed_hosts={{ monitoring_ip }},127.0.0.1
+        command[check_load]=/usr/lib/nagios/plugins/check_load -w 5.0,4.0,3.0 -c 10.0,8.0,6.0
+        command[check_disk_root]=/usr/lib/nagios/plugins/check_disk -w 20% -c 10% -p /
+        command[check_procs]=/usr/lib/nagios/plugins/check_procs -w 300 -c 400
+    notify: restart nrpe
+    when: ansible_os_family == "Debian"
+
+  - name: EL | make sure AppStream/BaseOS are present (noop if already mirrored)
+    command: dnf -y makecache
+    changed_when: false
+    when: ansible_os_family == "RedHat"
+
+  - name: EL | install NRPE and lean plugins (transaction-only enable of internal EPEL)
+    dnf:
+      name:
+        - nrpe
+        - perl                                  # keep perl handy for a few plugins
+        - "{{ rhel_plugins }}"
+      state: present
+      enablerepo: "{{ epel_id }}"
+    when: ansible_os_family == "RedHat"
+
+  - name: EL | drop NRPE config
+    copy:
+      dest: "{{ nrpe_conf_dir_el }}/nrpe.d/corp.cfg"
+      content: |
+        allowed_hosts={{ monitoring_ip }},127.0.0.1
+        command[check_load]=/usr/lib64/nagios/plugins/check_load -w 5.0,4.0,3.0 -c 10.0,8.0,6.0
+        command[check_disk_root]=/usr/lib64/nagios/plugins/check_disk -w 20% -c 10% -p /
+        command[check_procs]=/usr/lib64/nagios/plugins/check_procs -w 300 -c 400
+    notify: restart nrpe
+    when: ansible_os_family == "RedHat"
+
+  - name: Open 5666/tcp (EL only; Debian uses ufw typically disabled here)
+    firewalld:
+      port: 5666/tcp
+      permanent: yes
+      state: enabled
+      immediate: yes
+    when: ansible_os_family == "RedHat"
+
+  - name: Enable + start NRPE
+    service:
+      name: "{{ 'nrpe' if ansible_os_family == 'RedHat' else 'nagios-nrpe-server' }}"
+      state: started
+      enabled: yes
+
+  handlers:
+  - name: restart nrpe
+    service:
+      name: "{{ 'nrpe' if ansible_os_family == 'RedHat' else 'nagios-nrpe-server' }}"
+      state: restarted
+

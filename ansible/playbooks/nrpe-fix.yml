@@ -1,0 +1,36 @@
+- hosts: reposync.corp.local,backup.corp.local,security.corp.local
+  become: yes
+  tasks:
+    - name: Ensure include dir exists
+      ansible.builtin.file:
+        path: /etc/nagios/nrpe.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Point nrpe.cfg to include dir
+      ansible.builtin.replace:
+        path: /etc/nagios/nrpe.cfg
+        regexp: '^\s*#?\s*include_dir=.*$'
+        replace: 'include_dir=/etc/nagios/nrpe.d'
+
+    - name: Install basic NRPE commands
+      ansible.builtin.copy:
+        dest: /etc/nagios/nrpe.d/10-basic.cfg
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          command[check_load]=/usr/lib64/nagios/plugins/check_load -r -w 5,4,3 -c 7,6,5
+          command[check_disk]=/usr/lib64/nagios/plugins/check_disk -A -x tmpfs -x devtmpfs -x overlay -i /var/lib/containers -w 20% -c 10%
+          command[check_procs]=/usr/lib64/nagios/plugins/check_procs -w 250 -c 300
+
+    - name: Restore SELinux labels (works without Python SELinux bindings)
+      ansible.builtin.shell: restorecon -Rv /etc/nagios || true
+
+    - name: Restart NRPE
+      ansible.builtin.service:
+        name: nrpe
+        state: restarted
+
