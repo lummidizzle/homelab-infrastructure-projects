@@ -1,7 +1,7 @@
 # Monitoring Server Deep Dive — Nagios Core Build Guide
 **Host:** `monitoring.corp.local` (RHEL 9)  
 **Last updated:** 2025-08-31  
-**Author:** Olumide (with ChatGPT as co-pilot)
+**Author:** Olumide
 
 ## 0) Outcome
 Everything is **green**: all 16 hosts UP, all services OK.  
