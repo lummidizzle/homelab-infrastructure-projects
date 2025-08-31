@@ -1,0 +1,59 @@
+- hosts: all
+  become: true
+  tasks:
+    - name: Ensure packages present
+      package:
+        name:
+          - nrpe
+          - monitoring-plugins
+        state: present
+
+    - name: Make Nagios plugin dir and symlink monitoring-plugins
+      file:
+        path: /usr/lib64/nagios/plugins
+        state: directory
+        mode: '0755'
+    - name: Link monitoring-plugins to nagios/plugins
+      shell: ln -sf /usr/lib64/monitoring-plugins/check_* /usr/lib64/nagios/plugins/
+      args: { creates: /usr/lib64/nagios/plugins/check_load }
+      ignore_errors: true
+
+    - name: Ensure include_dir + allowed_hosts
+      lineinfile:
+        path: /etc/nagios/nrpe.cfg
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        backrefs: yes
+      loop:
+        - { regexp: '^[#\s]*include_dir=.*', line: 'include_dir=/etc/nagios/nrpe.d' }
+        - { regexp: '^allowed_hosts=.*',        line: 'allowed_hosts=127.0.0.1,::1,192.168.1.5,192.168.1.15' }
+
+    - name: Ensure nrpe.d exists
+      file:
+        path: /etc/nagios/nrpe.d
+        state: directory
+        mode: '0755'
+
+    - name: Install basic NRPE commands
+      copy:
+        dest: /etc/nagios/nrpe.d/10-basic.cfg
+        mode: '0644'
+        content: |
+          command[load]=/usr/lib64/nagios/plugins/check_load -r -w 5,4,3 -c 7,6,5
+          command[users]=/usr/lib64/nagios/plugins/check_users -w 5 -c 10
+          command[procs]=/usr/lib64/nagios/plugins/check_procs -w 250 -c 300
+          command[disk]=/usr/lib64/nagios/plugins/check_disk -w 20% -c 10% -p /
+          command[rootspace]=/usr/lib64/nagios/plugins/check_disk -w 20% -c 10% -p /
+
+    - name: Restore SELinux contexts
+      command: restorecon -Rv /etc/nagios
+      changed_when: false
+      failed_when: false
+
+    - name: Enable + restart NRPE
+      service:
+        name: nrpe
+        enabled: true
+        state: restarted
+
