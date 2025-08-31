@@ -1,6 +1,5 @@
 # Monitoring & Observability Overview (Nagios Core + NRPE)
 > ⭐ **Featured: Monitoring (Nagios Core + NRPE)** — see [monitoring/README.md](monitoring/README.md)
-> ⭐ **Featured: Monitoring (Nagios Core + NRPE)** — see [monitoring/README.md](monitoring/README.md)
 **Project:** Homelab Infrastructure Projects  
 **Doc type:** Root README (executive + technical overview)  
 **Last updated:** 2025-08-31
