@@ -7,21 +7,33 @@
 
 Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using real-world tools, enterprise practices, and hands-on automation.
 
-### ⭐ Featured update: AD ↔ Linux Integration Runbook
+---
 
-### ⭐ Featured update: Monitoring (Nagios Core + NRPE) Runbook
-Read the step-by-step guide: [`monitoring/README.md`](monitoring/README.md)  
-Quick overview: [`monitoring/overview.md`](monitoring/overview.md)
+## ⭐ Featured
 
+- **AD ↔ Linux Integration Runbook**
+- **Monitoring (Nagios Core + NRPE) Runbook**
+- **Centralized Logging (rsyslog)**
 
-**Read the step-by-step guide:** [`ansible/docs/ad-linux-integration/README.md`](ansible/docs/ad-linux-integration/README.md)  
+---
 
-[![main last commit](https://img.shields.io/github/last-commit/lummidizzle/homelab-infrastructure-projects/main?label=main%20last%20commit)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
+## 📘 Read the step-by-step guides
 
-**See recent changes:** https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main
+- **AD ↔ Linux Integration**  
+  `guide:` [ansible/docs/ad-linux-integration/README.md](ansible/docs/ad-linux-integration/README.md)
 
+- **Monitoring (Nagios Core + NRPE)**  
+  `guide:` [monitoring/README.md](monitoring/README.md)  
+  `quick overview:` [monitoring/overview.md](monitoring/overview.md)
 
-🔗 **Live Demo (GitHub Pages):** [View Documentation](https://lummidizzle.github.io/homelab-infrastructure-projects/)
+- **Centralized Logging (rsyslog)**  
+  `guide:` [monitoring/centralized-logging.md](monitoring/centralized-logging.md)
+
+---
+
+### 🔎 Recent activity
+See recent changes: <https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main>
+Live Demo (GitHub Pages): [View Documentation](docs/index.md)
 
 ---
 
