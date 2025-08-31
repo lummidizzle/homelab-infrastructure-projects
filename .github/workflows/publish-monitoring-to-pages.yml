@@ -1,0 +1,33 @@
+name: Publish Monitoring to Pages
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'monitoring/**'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copy runbook into docs/monitoring as site page
+        run: |
+          mkdir -p docs/monitoring
+          cp monitoring/README.md docs/monitoring/index.md
+          # fix image paths so they render on the site
+          sed -i 's#(assets/#(https://raw.githubusercontent.com/lummidizzle/homelab-infrastructure-projects/main/monitoring/assets/#g' docs/monitoring/index.md
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- docs/monitoring/index.md; then
+            echo "No changes"; exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/monitoring/index.md
+          git commit -m "pages: refresh /monitoring from repo runbook"
+          git push
