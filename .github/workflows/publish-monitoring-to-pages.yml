@@ -1,10 +1,15 @@
 name: Publish Monitoring to Pages
+
 on:
   push:
     branches: [ main ]
     paths:
       - 'monitoring/**'
+      - '.github/workflows/publish-monitoring-to-pages.yml'
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   sync:
@@ -14,20 +19,43 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Copy runbook into docs/monitoring as site page
+      # Make sure Pages will render Markdown (turn Jekyll back on)
+      - name: Ensure Jekyll can render pages (remove .nojekyll if present)
+        run: |
+          if [ -f docs/.nojekyll ]; then
+            git rm -f docs/.nojekyll
+            echo "jekyll_changed=1" >> $GITHUB_ENV
+          else
+            echo "jekyll_changed=0" >> $GITHUB_ENV
+          fi
+
+      # Build docs/monitoring/index.md from the repo runbook with front matter
+      - name: Copy runbook into docs/monitoring as site page (with front matter)
         run: |
           mkdir -p docs/monitoring
-          cp monitoring/README.md docs/monitoring/index.md
-          # fix image paths so they render on the site
+          {
+            echo '---'
+            echo 'layout: default'
+            echo 'title: Monitoring (Nagios Core + NRPE)'
+            echo '---'
+            echo
+            cat monitoring/README.md
+          } > docs/monitoring/index.md
+
+          # Rewrite image paths so they render on GitHub Pages
           sed -i 's#(assets/#(https://raw.githubusercontent.com/lummidizzle/homelab-infrastructure-projects/main/monitoring/assets/#g' docs/monitoring/index.md
 
+      # Commit only if something actually changed
       - name: Commit if changed
         run: |
-          if git diff --quiet -- docs/monitoring/index.md; then
-            echo "No changes"; exit 0
+          if git diff --quiet -- docs/monitoring/index.md && [ "${jekyll_changed}" = "0" ]; then
+            echo "No changes"
+            exit 0
           fi
-          git config user.name  "github-actions[bot]"
+
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/monitoring/index.md
-          git commit -m "pages: refresh /monitoring from repo runbook"
+          git add -A docs
+          git commit -m "pages: publish /monitoring from repo runbook (render-ready)"
           git push
+
