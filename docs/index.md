@@ -7,3 +7,6 @@
 ## Featured Guides
 - **Monitoring (Nagios Core + NRPE)** — visit **/monitoring** on this site \
   → [/monitoring/](./monitoring/)
+
+## Featured Guides
+- **Monitoring (Nagios Core + NRPE)** — [/monitoring.html](./monitoring.html) (redirects to the full runbook)
