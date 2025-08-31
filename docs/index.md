@@ -1,4 +1,5 @@
 
+* **Monitoring (Nagios Core + NRPE)** — [/monitoring/](./monitoring/)
 ## Featured Guides
 - **Monitoring (Nagios Core + NRPE)** — \
   [Deep-dive runbook](https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main./monitoring.htmlREADME.md) · \
