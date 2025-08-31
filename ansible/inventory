@@ -116,3 +116,12 @@ devops.corp.local
 security.corp.local
 
 # If dns-nfs is Rocky, move it here too and remove from el9_stream
+[el_rhel]
+ansible.corp.local
+devops.corp.local
+dns-nfs.corp.local
+reposync.corp.local
+backup.corp.local
+security.corp.local
+# add monitoring.corp.local too if you also run NRPE checks on the hub
+

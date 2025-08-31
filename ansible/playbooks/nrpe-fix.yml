@@ -1,36 +1,129 @@
-- hosts: reposync.corp.local,backup.corp.local,security.corp.local
-  become: yes
+---
+- name: Make NRPE commands work the same on every RHEL host
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    # Who is allowed to talk to NRPE (your hub(s))
+    nrpe_allowed_hosts: "127.0.0.1,::1,192.168.1.5,192.168.1.15"
+    nrpe_dir: /etc/nagios/nrpe.d
+    nrpe_cfg: /etc/nagios/nrpe.cfg
+    nagios_plugins_dir: /usr/lib64/nagios/plugins
+    mon_plugins_dir: /usr/lib64/monitoring-plugins
+
   tasks:
     - name: Ensure include dir exists
-      ansible.builtin.file:
-        path: /etc/nagios/nrpe.d
+      file:
+        path: "{{ nrpe_dir }}"
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
-    - name: Point nrpe.cfg to include dir
-      ansible.builtin.replace:
-        path: /etc/nagios/nrpe.cfg
-        regexp: '^\s*#?\s*include_dir=.*$'
-        replace: 'include_dir=/etc/nagios/nrpe.d'
+    - name: Remove any duplicate/old include_dir lines
+      lineinfile:
+        path: "{{ nrpe_cfg }}"
+        state: absent
+        regexp: '^\s*include_dir='
 
-    - name: Install basic NRPE commands
-      ansible.builtin.copy:
-        dest: /etc/nagios/nrpe.d/10-basic.cfg
+    - name: Ensure single include_dir points to nrpe.d
+      lineinfile:
+        path: "{{ nrpe_cfg }}"
+        state: present
+        line: "include_dir={{ nrpe_dir }}"
+        create: yes
+        mode: "0644"
+
+    - name: Set allowed_hosts
+      lineinfile:
+        path: "{{ nrpe_cfg }}"
+        state: present
+        regexp: '^allowed_hosts='
+        line: "allowed_hosts={{ nrpe_allowed_hosts }}"
+        create: yes
+        mode: "0644"
+
+    - name: Expose monitoring-plugins as nagios/plugins if needed (EL/RHEL layout quirk)
+      block:
+        - name: Create nagios plugins dir
+          file:
+            path: "{{ nagios_plugins_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Link monitoring-plugins/* into nagios/plugins/
+          shell: |
+            set -euo pipefail
+            if [ ! -x "{{ nagios_plugins_dir }}/check_load" ] && [ -x "{{ mon_plugins_dir }}/check_load" ]; then
+              ln -sf {{ mon_plugins_dir }}/check_* {{ nagios_plugins_dir }}/
+            fi
+          args:
+            executable: /bin/bash
+
+    - name: Install the single source of truth NRPE commands
+      copy:
+        dest: "{{ nrpe_dir }}/10-basic.cfg"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
         content: |
-          command[check_load]=/usr/lib64/nagios/plugins/check_load -r -w 5,4,3 -c 7,6,5
-          command[check_disk]=/usr/lib64/nagios/plugins/check_disk -A -x tmpfs -x devtmpfs -x overlay -i /var/lib/containers -w 20% -c 10%
-          command[check_procs]=/usr/lib64/nagios/plugins/check_procs -w 250 -c 300
+          command[load]=/usr/lib64/nagios/plugins/check_load -r -w 5,4,3 -c 7,6,5
+          command[users]=/usr/lib64/nagios/plugins/check_users -w 5 -c 10
+          command[procs]=/usr/lib64/nagios/plugins/check_procs -w 250 -c 300
+          # Primary name used by the hub:
+          command[disk]=/usr/lib64/nagios/plugins/check_disk -p / -w 20% -c 10%
+          # Legacy alias some templates still call:
+          command[rootspace]=/usr/lib64/nagios/plugins/check_disk -p / -w 20% -c 10%
 
-    - name: Restore SELinux labels (works without Python SELinux bindings)
-      ansible.builtin.shell: restorecon -Rv /etc/nagios || true
+    - name: Restore SELinux context on NRPE dir
+      shell: restorecon -Rv {{ nrpe_dir }} || true
+      args: { executable: /bin/bash }
 
     - name: Restart NRPE
-      ansible.builtin.service:
+      service:
         name: nrpe
         state: restarted
+        enabled: true
+
+    - name: Show last NRPE log lines (should say it is reading {{ nrpe_dir }})
+      shell: journalctl -u nrpe -n 20 --no-pager
+      args: { executable: /bin/bash }
+      register: nrpe_journal
+      changed_when: false
+
+    - debug:
+        var: nrpe_journal.stdout_lines
+
+# === OPTIONAL verification from the monitoring hub ===
+- name: Verify from the hub using check_nrpe
+  hosts: monitoring.corp.local
+  become: false
+  gather_facts: false
+  vars:
+    targets:
+      - ansible.corp.local
+      - devops.corp.local
+      - reposync.corp.local
+      - backup.corp.local
+      - security.corp.local
+      - dns-nfs.corp.local
+  tasks:
+    - name: check_nrpe load/users/procs/disk on each target
+      command: >
+        /usr/lib64/nagios/plugins/check_nrpe -4 -H {{ item }} -c {{ cmd }}
+      loop: "{{ targets | product(['load','users','procs','disk']) | list }}"
+      loop_control:
+        label: "{{ item.0 }} {{ item.1 }}"
+      vars:
+        item_host: "{{ item.0 }}"
+        cmd: "{{ item.1 }}"
+      register: nrpe_checks
+      failed_when: false
+
+    - name: Show results
+      debug:
+        msg: "{{ nrpe_checks.results | map(attribute='stdout') | list }}"
 

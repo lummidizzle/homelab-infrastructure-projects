@@ -1,0 +1,112 @@
+---
+- name: NRPE – reset to a known-good minimal config
+  hosts:
+    - ansible.corp.local
+    - devops.corp.local
+    - reposync.corp.local
+    - backup.corp.local
+    - security.corp.local
+    - dns-nfs.corp.local
+  become: true
+  gather_facts: false
+
+  vars:
+    allowed_hosts: "127.0.0.1,::1,192.168.1.5,192.168.1.15"
+    nagios_plugins_dir: "/usr/lib64/nagios/plugins"
+    mon_plugins_dir: "/usr/lib64/monitoring-plugins"
+
+  tasks:
+    - name: Make sure the include dir exists
+      file:
+        path: /etc/nagios/nrpe.d
+        state: directory
+        mode: "0755"
+
+    - name: Ensure nrpe.cfg references include_dir only once (clean duplicates)
+      replace:
+        path: /etc/nagios/nrpe.cfg
+        regexp: '^\s*#?\s*include_dir=.*$'
+        replace: ''
+      ignore_errors: true
+
+    - name: Ensure include_dir is present
+      lineinfile:
+        path: /etc/nagios/nrpe.cfg
+        line: 'include_dir=/etc/nagios/nrpe.d'
+        create: yes
+        insertafter: EOF
+
+    - name: Ensure allowed_hosts
+      lineinfile:
+        path: /etc/nagios/nrpe.cfg
+        regexp: '^allowed_hosts='
+        line: "allowed_hosts={{ allowed_hosts }}"
+        create: yes
+
+    # Standardize plugin path: if nagios/plugins is missing, point it at monitoring-plugins
+    - name: Create nagios/plugins dir if missing
+      file:
+        path: "{{ nagios_plugins_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Symlink plugin binaries if only monitoring-plugins exist
+      file:
+        src: "{{ mon_plugins_dir }}/{{ item }}"
+        dest: "{{ nagios_plugins_dir }}/{{ item }}"
+        state: link
+        force: yes
+      loop:
+        - check_load
+        - check_users
+        - check_procs
+        - check_disk
+      when:
+        - not (nagios_plugins_dir is exists)
+        - ansible_check_mode is not defined  # just to silence check mode if used
+      ignore_errors: true
+
+    # Remove conflicting old files (keep ONLY our 10-basic.cfg)
+    - name: Find existing nrpe.d cfg files
+      find:
+        paths: /etc/nagios/nrpe.d
+        patterns: "*.cfg"
+      register: found_cfgs
+
+    - name: Remove all cfgs except 10-basic.cfg
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ found_cfgs.files }}"
+      when: item.path != "/etc/nagios/nrpe.d/10-basic.cfg"
+
+    - name: Install minimal command set
+      copy:
+        dest: /etc/nagios/nrpe.d/10-basic.cfg
+        mode: "0644"
+        content: |
+          command[load]      = {{ nagios_plugins_dir }}/check_load  -r -w 5,4,3  -c 7,6,5
+          command[users]     = {{ nagios_plugins_dir }}/check_users -w 5       -c 10
+          command[procs]     = {{ nagios_plugins_dir }}/check_procs -w 250     -c 300
+          # Use a single disk check with legacy alias. Exclude tmpfs/devtmpfs/overlay to avoid false alarms.
+          command[disk]      = {{ nagios_plugins_dir }}/check_disk  -A -x tmpfs -x devtmpfs -x overlay -i /var/lib/containers -w 20% -c 10%
+          command[rootspace] = {{ nagios_plugins_dir }}/check_disk  -A -x tmpfs -x devtmpfs -x overlay -i /var/lib/containers -w 20% -c 10%
+
+    - name: Restore SELinux contexts
+      command: restorecon -Rv /etc/nagios/nrpe.d
+      changed_when: false
+
+    - name: Restart NRPE
+      service:
+        name: nrpe
+        state: restarted
+        enabled: yes
+
+    - name: Brief proof (tail the last 3 lines)
+      command: journalctl -u nrpe -n 3 --no-pager
+      register: jrnl
+      changed_when: false
+
+    - debug:
+        var: jrnl.stdout
+
