@@ -1,9 +1,21 @@
 ---
-title: Monitoring (Nagios Core + NRPE)
 layout: default
+title: Monitoring (Nagios Core + NRPE)
+permalink: /monitoring/
 ---
 
-**Monitoring Server Deep Dive** — Nagios Core + NRPE
+## Monitoring Server Deep Dive — Nagios Core + NRPE
 
-- 👉 [Open the full runbook](https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main/monitoring/README.md)
-- 👉 [Quick overview](https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main/monitoring/overview.md)
+**Host:** `monitoring.corp.local` (RHEL 9)  
+**Outcome:** All hosts UP, all services OK.
+
+### Quick links
+- **Runbook (full deep-dive):** [monitoring/README.md](https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main/monitoring/README.md)
+- **One-page overview:** [monitoring/overview.md](https://github.com/lummidizzle/homelab-infrastructure-projects/blob/main/monitoring/overview.md)
+
+### Current state (Nagios)
+**Hosts**
+![Nagios Hosts](assets/nagios-hosts.png)
+
+**Services**
+![Nagios Services](assets/nagios-services.png)
