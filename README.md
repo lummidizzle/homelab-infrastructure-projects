@@ -204,12 +204,6 @@ glpi.corp.local
         state: restarted
 ```
 
-## 7) Proof (Screens)
-- Featured doc pointer in repo:  
-- Root repo listing (Nagios folder will be renamed from "satellite-server" → **monitoring**):  
-- Git status showing untracked/modified monitoring files to commit:  
-
-## 8) Git Commit Sequence
 ```bash
 git checkout -b feat/monitoring-docs
 git add ansible/playbooks/deploy-nrpe.yml ansible/playbooks/push-nagios-objects.yml
