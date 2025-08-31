@@ -1,3 +1,8 @@
+---
+layout: default
+title: Monitoring (Nagios Core + NRPE)
+---
+
 # Monitoring Server Deep Dive — Nagios Core Build Guide
 **Host:** `monitoring.corp.local` (RHEL 9)  
 **Last updated:** 2025-08-31  
