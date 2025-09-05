@@ -1,171 +1,79 @@
 ---
-# ===============================
+# ============================================================
 # Global Site Playbook (site.yml)
-# ===============================
+# ============================================================
 
-# -------------------------------
-# 1) Enforce ONLY local repos (RHEL/Rocky/Alma)
-#    Detect local-mirror repo IDs per-host; enforce ONLY if both BaseOS & AppStream exist.
-# -------------------------------
-- name: Enforce ONLY local repos on RedHat-like servers
+# 1) Repo Guardrails (EL9 Rocky/Alma/Stream) + RHEL9 (RHSM left alone)
+#    - Uses roles/repo_guardrails (defaults to reposync.corp.local)
+#    - Skips the reposync server and non-EL9 automatically (handled in role)
+- name: Enforce local repos on RedHat-like EL9 hosts
   hosts: redhat_like
   become: yes
-  gather_facts: false
-  tags: [repo]
-  vars:
-    # Change if your mirror hostname differs
-    local_repo_host: "reposync.corp.local"
+  gather_facts: true
+  roles:
+    - { role: repo_guardrails, tags: ['repo_guardrails'] }
 
-  tasks:
-    - name: (check mode) Would enforce local DNF repos only
-      ansible.builtin.debug:
-        msg: "Would disable ALL repos and enable only repos whose baseurl matches {{ local_repo_host }}"
-      when: ansible_check_mode
-
-    - name: Detect repo IDs whose baseurl points to our local mirror
-      ansible.builtin.shell: |
-        set -euo pipefail
-        host="{{ local_repo_host }}"
-        awk -v host="$host" '
-          /^\[/ {gsub(/[\[\]]/,""); sect=$0; next}
-          /^baseurl=/ {
-            url=$0; sub(/^baseurl=/,"",url);
-            if (url ~ host && length(sect)>0) {print sect}
-          }
-        ' /etc/yum.repos.d/*.repo 2>/dev/null | sort -u
-      args:
-        executable: /bin/bash
-      register: detected_local_repo_ids
-      changed_when: false
-      failed_when: false
-      check_mode: no
-
-    # ---- FIX: split classification into separate tasks ----
-    - name: Capture detected repo IDs into facts
-      ansible.builtin.set_fact:
-        _local_ids: "{{ detected_local_repo_ids.stdout_lines | default([]) }}"
-      check_mode: no
-
-    - name: Build BaseOS-like/AppStream-like/CRB-like lists
-      ansible.builtin.set_fact:
-        _baseos_ids: "{{ _local_ids | select('match','(?i).*baseos.*') | list }}"
-        _appstream_ids: "{{ _local_ids | select('match','(?i).*appstream.*') | list }}"
-        _crb_ids: "{{ _local_ids | select('match','(?i).*crb.*') | list }}"
-      check_mode: no
-
-    - name: Compute core list and readiness flag
-      ansible.builtin.set_fact:
-        _core_ids: "{{ (_baseos_ids + _appstream_ids + _crb_ids) | unique }}"
-        _have_core_locals: "{{ (_baseos_ids | length > 0) and (_appstream_ids | length > 0) }}"
-      check_mode: no
-    # -------------------------------------------------------
-
-    - name: Repo IDs detected (info)
-      ansible.builtin.debug:
-        msg: >
-          Found: {{ _local_ids | join(', ') | default('NONE', true) }}
-          | BaseOS-like: {{ _baseos_ids | join(', ') | default('NONE', true) }}
-          | AppStream-like: {{ _appstream_ids | join(', ') | default('NONE', true) }}
-          | CRB-like: {{ _crb_ids | join(', ') | default('NONE', true) }}
-
-    - name: Skip host if no BaseOS+AppStream locals present (leave repos as-is)
-      ansible.builtin.meta: end_host
-      when: ansible_check_mode or not _have_core_locals
-
-    - name: Ensure dnf-plugins-core is installed (for config-manager)
-      ansible.builtin.command: rpm -q dnf-plugins-core
-      register: dnf_plugins_q
-      changed_when: false
-      failed_when: false
-      check_mode: no
-
-    - name: Install dnf-plugins-core (needed for config-manager)
-      ansible.builtin.command: dnf -y install dnf-plugins-core
-      when: (dnf_plugins_q.rc | default(1)) != 0
-
-    - name: Disable ALL repos
-      ansible.builtin.command: dnf config-manager --set-disabled '*'
-
-    - name: Enable ONLY our local BaseOS/AppStream(+CRB) repos
-      ansible.builtin.command: >
-        dnf config-manager --set-enabled {{ _core_ids | join(' ') }}
-
-    - name: Clean DNF metadata
-      ansible.builtin.command: dnf clean all
-      changed_when: false
-
-    - name: Rebuild cache (local repos only)
-      ansible.builtin.command: dnf makecache
-      changed_when: false
-
-# -------------------------------
-# 1b) Upstream APT updates (Debian/Ubuntu — no local mirror today)
-# -------------------------------
-- name: Update APT cache and upgrade using existing upstream sources
+# 1b) Ubuntu maintenance (no internal APT mirror yet → upstream only)
+- name: Ubuntu APT maintenance (upstream sources)
   hosts: ubuntu_servers
   become: yes
   gather_facts: true
-  tags: [repo]
-
   pre_tasks:
-    - name: (check mode) Would run apt update && dist-upgrade via current sources.list
+    - name: "[CHECK MODE] Would run apt update && dist-upgrade using current sources"
       ansible.builtin.debug:
-        msg: "Would update/upgrade {{ ansible_distribution }} {{ ansible_distribution_release }} using current APT sources."
+        msg: "Would update/upgrade {{ ansible_distribution }} {{ ansible_distribution_release }} via existing sources.list."
       when: ansible_check_mode
-
   tasks:
     - name: Update APT cache
       ansible.builtin.apt:
         update_cache: yes
         cache_valid_time: 3600
       when: not ansible_check_mode
-
-    - name: Upgrade packages (dist-upgrade)
+    - name: Dist-upgrade packages
       ansible.builtin.apt:
         upgrade: dist
         autoremove: yes
         autoclean: yes
       when: not ansible_check_mode
+  tags: ['apt']
 
-# -------------------------------
-# 2) Common Setup
-# -------------------------------
+# 2) Common setup
 - name: Apply common configuration to all Linux
   hosts: linux
   become: yes
-  roles: [common]
-  tags: [common]
-# -------------------------------
+  gather_facts: true
+  roles:
+    - { role: common, tags: ['common'] }
+
 # 2b) Automated security patching
-# -------------------------------
 - name: Configure automated security patching
   hosts: linux
   become: yes
-  roles: [patching]
-  tags: [patching]
+  gather_facts: true
+  roles:
+    - { role: patching, tags: ['patching'] }
 
-# -------------------------------
-# 3) Security Hardening
-# -------------------------------
+# 3) Security hardening
 - name: Apply security hardening
   hosts: linux
   become: yes
-  roles: [security]
-  tags: [security]
+  gather_facts: true
+  roles:
+    - { role: security, tags: ['security'] }
 
-# -------------------------------
 # 4) Monitoring (Nagios Core)
-# -------------------------------
 - name: Configure monitoring server
   hosts: monitoring
   become: yes
-  roles: [monitoring]
+  gather_facts: true
+  roles:
+    - { role: monitoring, tags: ['monitoring'] }
 
-# -------------------------------
 # 5) Backup Server
-# -------------------------------
 - name: Configure backup automation
   hosts: backup
   become: yes
-  roles: [backup]
+  gather_facts: true
+  roles:
+    - { role: backup, tags: ['backup'] }
 

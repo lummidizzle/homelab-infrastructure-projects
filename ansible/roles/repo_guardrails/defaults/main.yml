@@ -1,0 +1,7 @@
+# roles/repo_guardrails/defaults/main.yml
+repo_mirror_host: reposync.corp.local   # your mirror FQDN
+el_major: "9"                           # EL major version you’re guarding
+
+# (compat shim in case other tasks/templates use local_repo_host already)
+local_repo_host: "{{ repo_mirror_host }}"
+
