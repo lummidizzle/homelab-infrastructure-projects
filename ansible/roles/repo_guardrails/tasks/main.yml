@@ -1,18 +1,16 @@
 ---
-# ============================================================
-# Repo Guardrails v1.0 (stable)
-# - Preflight HEAD checks always run (even in --check)
-# - Facts computed in separate steps to avoid "undefined" issues
-# - RHEL9 stays on RHSM; only ensure epel-local there
-# - Rocky/Alma/Stream9: define local repos; remove others; enable only ours
-# ============================================================
+# ==============================================================
+# Repo Guardrails v1.1 (merged)
+# - Keeps your early exits, preflight HEAD, RHEL9 epel-only rule
+# - Adds distro-aware URLs (Rocky vs CentOS Stream)
+# ==============================================================
 
 # ---------- Early exits ----------
-- name: repo_guardrails | Determine whether this host should be managed by guardrails
+- name: repo_guardrails | Determine host flags
   ansible.builtin.set_fact:
-    _is_redhat_like: "{{ ansible_facts['os_family'] == 'RedHat' }}"
-    _is_el9: "{{ ansible_facts['distribution_major_version'] == '9' }}"
-    _is_rhel: "{{ ansible_facts['distribution'] is match('RedHat', ignorecase=True) }}"
+    _is_redhat_like: "{{ ansible_os_family == 'RedHat' }}"
+    _is_el9: "{{ ansible_distribution_major_version == '9' }}"
+    _is_rhel: "{{ ansible_distribution is match('(?i)^RedHat') }}"
     _is_repo_server: "{{ 'reposync' in inventory_hostname }}"
   changed_when: false
 
@@ -20,17 +18,31 @@
   ansible.builtin.meta: end_host
   when: not (_is_redhat_like and _is_el9) or _is_repo_server
 
-# ---------- Preflight: prove the mirror is reachable ----------
-- name: repo_guardrails | Build preflight URLs (repodata endpoints)
+# ---------- Build distro-aware URLs ----------
+- name: repo_guardrails | Choose namespace mapping (Rocky vs Stream)
   ansible.builtin.set_fact:
-    _preflight_urls:
-      - "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/BaseOS/x86_64/os/repodata/repomd.xml"
-      - "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/AppStream/x86_64/os/repodata/repomd.xml"
-      - "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/CRB/x86_64/os/repodata/repomd.xml"
-      - "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/repodata/repomd.xml"
+    _ns_map: "{{ guardrails_ns[ansible_distribution] | default(guardrails_ns['CentOS Stream']) }}"
   changed_when: false
 
-- name: repo_guardrails | Preflight | HEAD {{ item }}
+- name: repo_guardrails | Compose baseurls
+  ansible.builtin.set_fact:
+    _baseos_url:    "http://{{ repo_mirror_host }}/{{ _ns_map.ns }}/{{ _ns_map.baseos }}/x86_64/os/"
+    _appstream_url: "http://{{ repo_mirror_host }}/{{ _ns_map.ns }}/{{ _ns_map.appstream }}/x86_64/os/"
+    _crb_url:       "http://{{ repo_mirror_host }}/{{ _ns_map.ns }}/{{ _ns_map.crb }}/x86_64/os/"
+    _epel_url:      "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/"
+  changed_when: false
+
+# ---------- Preflight: prove the mirror is reachable for THIS distro ----------
+- name: repo_guardrails | Preflight endpoints (this distro only)
+  ansible.builtin.set_fact:
+    _preflight_urls:
+      - "{{ _baseos_url }}repodata/repomd.xml"
+      - "{{ _appstream_url }}repodata/repomd.xml"
+      - "{{ _crb_url }}repodata/repomd.xml"
+      - "{{ _epel_url }}repodata/repomd.xml"
+  changed_when: false
+
+- name: repo_guardrails | HEAD {{ item }}
   ansible.builtin.uri:
     url: "{{ item }}"
     method: HEAD
@@ -41,28 +53,33 @@
   check_mode: no
   register: _preflight_results
   changed_when: false
+  failed_when: false
+  when: >
+    (ansible_distribution == "CentOS Stream" and item is search("/centos-stream/"))
+    or (ansible_distribution == "Rocky" and item is search("/rocky/"))
+    or (item is search("/repos/el"))
+  changed_when: false
 
-# ---------- Detect any repo IDs already pointing at our mirror ----------
+# ---------- Detect already-local repo IDs (by host match) ----------
 - name: repo_guardrails | Detect repo IDs whose baseurl host matches repo_mirror_host
   ansible.builtin.shell: |
     set -uo pipefail
     host="{{ repo_mirror_host }}"
-    awk -v host="$host" '
-      /^\[/ { gsub(/[\[\]]/, "", $0); sect=$0; next }
+    awk '
+      /^\[/ { gsub(/\[|\]/,"",$0); sect=$0; next }
       /^baseurl=/ {
-        url=$0; sub(/^baseurl=/,"",url)
-        match(url, /^[a-z]+:\/\/([^\/]+)/, m)
-        if (m[1] ~ ("^" host "(:[0-9]+)?$")) print sect
+        url=$0; sub(/baseurl=/,"",url);
+        if (url ~ "://"host"/") print sect
       }
     ' /etc/yum.repos.d/*.repo 2>/dev/null | sort -u
   args: { executable: /bin/bash }
   register: detected_local_repo_ids
   changed_when: false
-  check_mode: no
 
 - name: repo_guardrails | Capture detected repo IDs list
   ansible.builtin.set_fact:
     _local_ids: "{{ detected_local_repo_ids.stdout_lines | default([]) }}"
+  changed_when: false
 
 - name: repo_guardrails | Classify detected IDs (lists)
   ansible.builtin.set_fact:
@@ -70,63 +87,78 @@
     _appstream_ids: "{{ _local_ids | select('match','(?i)appstream') | list }}"
     _crb_ids:       "{{ _local_ids | select('match','(?i)crb')       | list }}"
     _epel_ids:      "{{ _local_ids | select('search','(?i)epel')     | list }}"
+  changed_when: false
 
 - name: repo_guardrails | Compute readiness flag
   ansible.builtin.set_fact:
     _have_core_locals: "{{ (_baseos_ids | length > 0) and (_appstream_ids | length > 0) }}"
+  changed_when: false
 
-# ---------- RHEL 9 (RHSM) path ----------
-- name: repo_guardrails | RHEL9 | Ensure epel-local exists (mirror)
+# ---------- RHEL9 (RHSM path): only ensure epel-local ----------
+- name: repo_guardrails | Ensure epel-local exists (RHEL9)
   ansible.builtin.yum_repository:
     name: epel-local
     description: "EPEL {{ el_major }} - Everything (local)"
-    baseurl: "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/"
+    baseurl: "{{ _epel_url }}"
     enabled: yes
-    gpgcheck: no
+    gpgcheck: "{{ guardrails_gpgcheck | int }}"
+    priority: 2
+    skip_if_unavailable: no
   when: _is_rhel
   tags: ['repo_guardrails']
 
-- name: repo_guardrails | RHEL9 info
+- name: repo_guardrails | RHEL9 host detected; RHSM repos left as-is. Ensured epel-local only.
   ansible.builtin.debug:
     msg: "RHEL9 host detected; RHSM repos left as-is. Ensured epel-local only."
   when: _is_rhel
   changed_when: false
 
-# ---------- Rocky/Alma/Stream9 path ----------
-- name: repo_guardrails | Ensure the four local repos exist (Rocky/Alma/Stream9)
+# ---------- Rocky/Stream path: ensure our four local repos exist ----------
+- name: repo_guardrails | Ensure the four local repos exist (Rocky/Stream)
   when: not _is_rhel
   block:
     - name: BaseOS local
       ansible.builtin.yum_repository:
         name: baseos-local
-        description: "Rocky {{ el_major }} - BaseOS (local)"
-        baseurl: "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/BaseOS/x86_64/os/"
+        description: "Local BaseOS"
+        baseurl: "{{ _baseos_url }}"
         enabled: yes
-        gpgcheck: no
+        gpgcheck: "{{ guardrails_gpgcheck | int }}"
+        priority: 1
+        skip_if_unavailable: no
+
     - name: AppStream local
       ansible.builtin.yum_repository:
         name: appstream-local
-        description: "Rocky {{ el_major }} - AppStream (local)"
-        baseurl: "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/AppStream/x86_64/os/"
+        description: "Local AppStream"
+        baseurl: "{{ _appstream_url }}"
         enabled: yes
-        gpgcheck: no
+        gpgcheck: "{{ guardrails_gpgcheck | int }}"
+        priority: 1
+        skip_if_unavailable: no
+
     - name: CRB local
       ansible.builtin.yum_repository:
         name: crb-local
-        description: "Rocky {{ el_major }} - CRB (local)"
-        baseurl: "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/CRB/x86_64/os/"
+        description: "Local CRB"
+        baseurl: "{{ _crb_url }}"
         enabled: yes
-        gpgcheck: no
+        gpgcheck: "{{ guardrails_gpgcheck | int }}"
+        priority: 1
+        skip_if_unavailable: no
+
     - name: EPEL local
       ansible.builtin.yum_repository:
         name: epel-local
-        description: "EPEL {{ el_major }} - Everything (local)"
-        baseurl: "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/"
+        description: "Local EPEL"
+        baseurl: "{{ _epel_url }}"
         enabled: yes
-        gpgcheck: no
+        gpgcheck: "{{ guardrails_gpgcheck | int }}"
+        priority: 2
+        skip_if_unavailable: no
   tags: ['repo_guardrails']
 
-# --- Build allowlist (prefer detected IDs; else fallback) ---
+# ---------- Build allowlist (prefer detected IDs; else fallback) ----------
 - name: repo_guardrails | Define fallback allowlist IDs
   ansible.builtin.set_fact:
     _fallback_ids:
@@ -135,22 +167,24 @@
       - crb-local
       - epel-local
   when: not _is_rhel
+  changed_when: false
 
 - name: repo_guardrails | Build allowlist (prefer detected IDs; else fallback)
   ansible.builtin.set_fact:
     _allow_ids: "{{ (_have_core_locals | ternary((_baseos_ids + _appstream_ids + _crb_ids + _epel_ids) | unique, _fallback_ids)) }}"
   when: not _is_rhel
+  changed_when: false
 
+# ---------- Ensure required tools ----------
 - name: repo_guardrails | Ensure dnf-plugins-core is installed
   ansible.builtin.package:
     name: dnf-plugins-core
     state: present
-  when: not _is_rhel
 
-# ---------- Replace config-manager with a file move guardrail ----------
+# ---------- Replace config-manager with file move guardrail ----------
 - name: repo_guardrails | Set backup dir for moved repo files
   ansible.builtin.set_fact:
-    _guardrails_bak: "/etc/yum.repos.d/guardrails-{{ ansible_date_time.iso8601_basic_short }}"
+    _guardrails_bak: "/etc/yum.repos.d/_guardrails-{{ ansible_date_time.iso8601_basic_short }}"
   when: not _is_rhel
 
 - name: repo_guardrails | Create backup directory
@@ -160,34 +194,27 @@
     mode: '0755'
   when: not _is_rhel
 
-- name: repo_guardrails | Move away all NON-local repo files (tolerant, both name styles)
+- name: repo_guardrails | Move away NON-local repo files
   ansible.builtin.shell: |
     set -euo pipefail
-    shopt -s nullglob
-
     keep_ids='(baseos-local|appstream-local|crb-local|epel-local|local-baseos|local-appstream|local-crb|local-epel|internal-baseos|internal-appstream|internal-crb)'
-
     for f in /etc/yum.repos.d/*.repo; do
-      # Keep files that contain a local-only stanza OR their filename clearly marks them as local
-      if grep -Eq "^\[${keep_ids}\]" "$f" \
-         || [[ "$f" =~ (^|/)(local|internal).*\.(repo)$ ]] \
-         || [[ "$f" =~ (^|/)(baseos|appstream|crb|epel)-local\.repo$ ]]; then
+      if grep -Eq "$keep_ids" "$f"; then
         continue
       fi
-      # If immutable, drop the bit so we can move it
       chattr -i "$f" 2>/dev/null || true
       mv -f -- "$f" "{{ _guardrails_bak }}/"
     done
   args: { executable: /bin/bash }
-  when: not _is_rhel
   register: _moved_repo_files
-  changed_when: "_moved_repo_files.stdout is not defined or _moved_repo_files.stdout != ''"
+  changed_when: _moved_repo_files.stdout is not defined or _moved_repo_files.stdout != ""
+  when: not _is_rhel
 
-# (we already ensured our four local repos exist & enabled: yes above)
+# ---------- Clean & verify ----------
 - name: repo_guardrails | Clean & makecache
   ansible.builtin.shell: |
     dnf clean all
-    dnf -y makecache
+    dnf -y makecache --refresh
   args: { executable: /bin/bash }
   when: not _is_rhel
 
@@ -195,7 +222,6 @@
   ansible.builtin.command: dnf repolist --enabled
   register: _enabled_repos_out
   changed_when: false
-  when: not _is_rhel
 
 - ansible.builtin.debug:
     var: _enabled_repos_out.stdout_lines

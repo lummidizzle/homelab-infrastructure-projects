@@ -1,7 +1,33 @@
-# roles/repo_guardrails/defaults/main.yml
-repo_mirror_host: reposync.corp.local   # your mirror FQDN
-el_major: "9"                           # EL major version you’re guarding
+# Base vars
+repo_mirror_host: reposync.corp.local
+el_major: "9"
 
-# (compat shim in case other tasks/templates use local_repo_host already)
+# compat shim (if older templates reference local_repo_host)
 local_repo_host: "{{ repo_mirror_host }}"
+
+# Turn on when you start signing locally (0|1)
+guardrails_gpgcheck: 0
+
+# Distro → path mapping used to build URLs
+guardrails_ns:
+  Rocky:
+    ns: "rocky/{{ el_major }}"
+    baseos: "BaseOS"
+    appstream: "AppStream"
+    crb: "CRB"
+  "CentOS Stream":
+    ns: "centos-stream/{{ el_major }}"
+    baseos: "baseos"
+    appstream: "appstream"
+    crb: "crb"
+
+# Optional audit helpers (we also move non-local .repo files aside)
+guardrails_disable_patterns:
+  - '^rhel-'
+  - '^epel-testing'
+  - 'source$'
+
+guardrails_blacklist_urls:
+  - '^https?://.*redhat.com/'
+  - '^https?://(mirror|dl|download)\.(rockylinux|centos|almalinux)\.org/'
 
