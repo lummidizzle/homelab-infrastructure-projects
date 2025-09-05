@@ -1,8 +1,11 @@
 ---
 # ==============================================================
-# Repo Guardrails v1.1 (merged)
-# - Keeps your early exits, preflight HEAD, RHEL9 epel-only rule
-# - Adds distro-aware URLs (Rocky vs CentOS Stream)
+# Repo Guardrails v1.2
+# - Distro-aware preflight + URLs (Rocky vs Stream)
+# - RHEL9 stays on RHSM; only ensure epel-local
+# - Move non-local .repo files aside
+# - Clean cache, THEN install dnf-plugins-core
+# - For Rocky/Stream, install using only our local repos
 # ==============================================================
 
 # ---------- Early exits ----------
@@ -32,7 +35,7 @@
     _epel_url:      "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/"
   changed_when: false
 
-# ---------- Preflight: prove the mirror is reachable for THIS distro ----------
+# ---------- Preflight: mirror reachability for THIS distro ----------
 - name: repo_guardrails | Preflight endpoints (this distro only)
   ansible.builtin.set_fact:
     _preflight_urls:
@@ -58,7 +61,6 @@
     (ansible_distribution == "CentOS Stream" and item is search("/centos-stream/"))
     or (ansible_distribution == "Rocky" and item is search("/rocky/"))
     or (item is search("/repos/el"))
-  changed_when: false
 
 # ---------- Detect already-local repo IDs (by host match) ----------
 - name: repo_guardrails | Detect repo IDs whose baseurl host matches repo_mirror_host
@@ -94,7 +96,7 @@
     _have_core_locals: "{{ (_baseos_ids | length > 0) and (_appstream_ids | length > 0) }}"
   changed_when: false
 
-# ---------- RHEL9 (RHSM path): only ensure epel-local ----------
+# ---------- RHEL9 (RHSM path) ----------
 - name: repo_guardrails | Ensure epel-local exists (RHEL9)
   ansible.builtin.yum_repository:
     name: epel-local
@@ -113,7 +115,7 @@
   when: _is_rhel
   changed_when: false
 
-# ---------- Rocky/Stream path: ensure our four local repos exist ----------
+# ---------- Rocky/Stream path ----------
 - name: repo_guardrails | Ensure the four local repos exist (Rocky/Stream)
   when: not _is_rhel
   block:
@@ -175,13 +177,7 @@
   when: not _is_rhel
   changed_when: false
 
-# ---------- Ensure required tools ----------
-- name: repo_guardrails | Ensure dnf-plugins-core is installed
-  ansible.builtin.package:
-    name: dnf-plugins-core
-    state: present
-
-# ---------- Replace config-manager with file move guardrail ----------
+# ---------- Backup & purge non-local repo files ----------
 - name: repo_guardrails | Set backup dir for moved repo files
   ansible.builtin.set_fact:
     _guardrails_bak: "/etc/yum.repos.d/_guardrails-{{ ansible_date_time.iso8601_basic_short }}"
@@ -210,7 +206,7 @@
   changed_when: _moved_repo_files.stdout is not defined or _moved_repo_files.stdout != ""
   when: not _is_rhel
 
-# ---------- Clean & verify ----------
+# ---------- Clean & makecache BEFORE installing anything ----------
 - name: repo_guardrails | Clean & makecache
   ansible.builtin.shell: |
     dnf clean all
@@ -218,6 +214,22 @@
   args: { executable: /bin/bash }
   when: not _is_rhel
 
+# ---------- Install dnf-plugins-core (after cache; scoped repos) ----------
+- name: repo_guardrails | Ensure dnf-plugins-core is installed (RHEL via RHSM)
+  ansible.builtin.package:
+    name: dnf-plugins-core
+    state: present
+  when: _is_rhel
+
+- name: repo_guardrails | Ensure dnf-plugins-core is installed (Rocky/Stream, local repos only)
+  ansible.builtin.dnf:
+    name: dnf-plugins-core
+    state: present
+    disablerepo: "*"
+    enablerepo: "{{ _allow_ids | join(',') }}"
+  when: not _is_rhel
+
+# ---------- Final visibility ----------
 - name: repo_guardrails | Show enabled repos
   ansible.builtin.command: dnf repolist --enabled
   register: _enabled_repos_out
@@ -226,4 +238,3 @@
 - ansible.builtin.debug:
     var: _enabled_repos_out.stdout_lines
   when: not _is_rhel
-

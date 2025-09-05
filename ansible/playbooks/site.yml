@@ -1,79 +1,35 @@
 ---
-# ============================================================
-# Global Site Playbook (site.yml)
-# ============================================================
-
-# 1) Repo Guardrails (EL9 Rocky/Alma/Stream) + RHEL9 (RHSM left alone)
-#    - Uses roles/repo_guardrails (defaults to reposync.corp.local)
-#    - Skips the reposync server and non-EL9 automatically (handled in role)
+# Enforce local repos on RedHat-like EL9 hosts
 - name: Enforce local repos on RedHat-like EL9 hosts
   hosts: redhat_like
-  become: yes
   gather_facts: true
+  gather_subset:
+    - min           # fast facts; includes distro/version needed by repo_guardrails
+    - '!hardware'   # avoid mounts scan that causes CIFS timeouts
+  gather_timeout: 30  # seconds
   roles:
-    - { role: repo_guardrails, tags: ['repo_guardrails'] }
+    - role: repo_guardrails
+      tags: ['repo_guardrails']
 
-# 1b) Ubuntu maintenance (no internal APT mirror yet → upstream only)
-- name: Ubuntu APT maintenance (upstream sources)
-  hosts: ubuntu_servers
-  become: yes
-  gather_facts: true
-  pre_tasks:
-    - name: "[CHECK MODE] Would run apt update && dist-upgrade using current sources"
-      ansible.builtin.debug:
-        msg: "Would update/upgrade {{ ansible_distribution }} {{ ansible_distribution_release }} via existing sources.list."
-      when: ansible_check_mode
-  tasks:
-    - name: Update APT cache
-      ansible.builtin.apt:
-        update_cache: yes
-        cache_valid_time: 3600
-      when: not ansible_check_mode
-    - name: Dist-upgrade packages
-      ansible.builtin.apt:
-        upgrade: dist
-        autoremove: yes
-        autoclean: yes
-      when: not ansible_check_mode
-  tags: ['apt']
-
-# 2) Common setup
-- name: Apply common configuration to all Linux
-  hosts: linux
-  become: yes
-  gather_facts: true
-  roles:
-    - { role: common, tags: ['common'] }
-
-# 2b) Automated security patching
-- name: Configure automated security patching
-  hosts: linux
-  become: yes
-  gather_facts: true
-  roles:
-    - { role: patching, tags: ['patching'] }
-
-# 3) Security hardening
-- name: Apply security hardening
-  hosts: linux
-  become: yes
-  gather_facts: true
-  roles:
-    - { role: security, tags: ['security'] }
-
-# 4) Monitoring (Nagios Core)
+# Configure monitoring server
 - name: Configure monitoring server
   hosts: monitoring
-  become: yes
   gather_facts: true
+  gather_subset:
+    - min
+  gather_timeout: 30
   roles:
-    - { role: monitoring, tags: ['monitoring'] }
+    - role: monitoring
+      tags: ['monitoring']
 
-# 5) Backup Server
+# Configure backup automation
 - name: Configure backup automation
   hosts: backup
-  become: yes
   gather_facts: true
+  gather_subset:
+    - min
+  gather_timeout: 30
   roles:
-    - { role: backup, tags: ['backup'] }
+    - role: backup
+      tags: ['backup']
 
