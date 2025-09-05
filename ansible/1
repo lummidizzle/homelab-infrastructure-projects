@@ -1,0 +1,165 @@
+---
+# ============================================================
+# Repo Guardrails v1.0
+# - Preflight: verify mirror endpoints are 200 OK from the host
+# - Rocky/Alma/Stream 9: define 4 local repos; disable others; enable only ours
+# - RHEL 9 (RHSM): leave RHSM repos alone; (optionally) ensure epel-local
+# - Skip: repo server itself, non-EL9, and anything not RedHat family
+# ============================================================
+
+# ---------- Early exits ----------
+- name: Determine whether this host should be managed by guardrails
+  ansible.builtin.set_fact:
+    _is_redhat_like: "{{ ansible_facts['os_family'] == 'RedHat' }}"
+    _is_el9: "{{ ansible_facts['distribution_major_version'] == '9' }}"
+    _is_rhel: "{{ ansible_facts['distribution'] is match('RedHat', ignorecase=True) }}"
+    _is_repo_server: "{{ 'reposync' in inventory_hostname }}"
+  changed_when: false
+
+- name: Stop here if not EL9 RedHat-like or it’s the repo server
+  ansible.builtin.meta: end_host
+  when: not (_is_redhat_like and _is_el9) or _is_repo_server
+
+# ---------- Preflight: prove the mirror is reachable (checks-first) ----------
+- name: Build preflight URLs (repodata endpoints)
+  ansible.builtin.set_fact:
+    _preflight_urls:
+      - "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/BaseOS/x86_64/os/repodata/repomd.xml"
+      - "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/AppStream/x86_64/os/repodata/repomd.xml"
+      - "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/CRB/x86_64/os/repodata/repomd.xml"
+      - "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/repodata/repomd.xml"
+  changed_when: false
+  when: not _is_rhel  # we’ll still check from RHEL, but we don’t enforce disable/enable there
+
+- name: Preflight | HEAD {{ item }}
+  ansible.builtin.uri:
+    url: "{{ item }}"
+    method: HEAD
+    return_content: no
+    status_code: 200
+    validate_certs: no
+  register: _preflight_results
+  loop: "{{ _preflight_urls }}"
+  when: not _is_rhel
+
+# ---------- Detect any repo IDs that already point at our mirror ----------
+- name: Detect repo IDs whose baseurl host == {{ repo_mirror_host }}
+  ansible.builtin.shell: |
+    set -uo pipefail
+    host="{{ repo_mirror_host }}"
+    awk -v host="$host" '
+      /^\[/ { gsub(/[\[\]]/,"",$0); sect=$0; next }
+      /^baseurl=/ {
+        url=$0; sub(/^baseurl=/,"",url)
+        match(url, /^[a-z]+:\/\/([^\/]+)/, m)
+        if (m[1] ~ ("^" host "(:[0-9]+)?$")) print sect
+      }
+    ' /etc/yum.repos.d/*.repo 2>/dev/null | sort -u
+  args: { executable: /bin/bash }
+  register: detected_local_repo_ids
+  changed_when: false
+
+- name: Classify detected IDs
+  ansible.builtin.set_fact:
+    _local_ids: "{{ detected_local_repo_ids.stdout_lines | default([]) }}"
+    _baseos_ids: "{{ _local_ids | select('match','(?i)baseos') | list }}"
+    _appstream_ids: "{{ _local_ids | select('match','(?i)appstream') | list }}"
+    _crb_ids: "{{ _local_ids | select('match','(?i)crb') | list }}"
+    _epel_ids: "{{ _local_ids | select('search','(?i)epel') | list }}"
+    _have_core_locals: "{{ (_baseos_ids|length>0) and (_appstream_ids|length>0) }}"
+  changed_when: false
+
+# ---------- RHEL 9 (RHSM) path: leave RHSM enabled; just ensure epel-local if you want ----------
+- name: RHEL9 | Ensure epel-local exists (points to mirror)
+  ansible.builtin.yum_repository:
+    name: epel-local
+    description: "EPEL {{ el_major }} - Everything (local)"
+    baseurl: "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/"
+    enabled: yes
+    gpgcheck: no
+  when: _is_rhel
+  tags: ['repo_guardrails']
+
+- name: RHEL9 | Info (RHSM left untouched by guardrails)
+  ansible.builtin.debug:
+    msg: "RHEL9 host detected; RHSM-managed repos left as-is. epel-local ensured."
+  when: _is_rhel
+  changed_when: false
+
+# ---------- Rocky/Alma/Stream 9 path: define locals; disable others; enable only ours ----------
+- name: Ensure the four local repos exist (Rocky/Alma/Stream 9)
+  when: not _is_rhel
+  block:
+    - name: BaseOS local
+      ansible.builtin.yum_repository:
+        name: baseos-local
+        description: "Rocky {{ el_major }} - BaseOS (local)"
+        baseurl: "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/BaseOS/x86_64/os/"
+        enabled: yes
+        gpgcheck: no
+
+    - name: AppStream local
+      ansible.builtin.yum_repository:
+        name: appstream-local
+        description: "Rocky {{ el_major }} - AppStream (local)"
+        baseurl: "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/AppStream/x86_64/os/"
+        enabled: yes
+        gpgcheck: no
+
+    - name: CRB local
+      ansible.builtin.yum_repository:
+        name: crb-local
+        description: "Rocky {{ el_major }} - CRB (local)"
+        baseurl: "http://{{ repo_mirror_host }}/rocky/{{ el_major }}/CRB/x86_64/os/"
+        enabled: yes
+        gpgcheck: no
+
+    - name: EPEL local
+      ansible.builtin.yum_repository:
+        name: epel-local
+        description: "EPEL {{ el_major }} - Everything (local)"
+        baseurl: "http://{{ repo_mirror_host }}/repos/el{{ el_major }}/epel/{{ el_major }}/Everything/x86_64/"
+        enabled: yes
+        gpgcheck: no
+  tags: ['repo_guardrails']
+
+- name: Build allowlist (prefer detected IDs; else fall back to standard names)
+  ansible.builtin.set_fact:
+    _fallback_ids: ['baseos-local','appstream-local','crb-local','epel-local']
+    _allow_ids: "{{ (_have_core_locals | ternary((_baseos_ids + _appstream_ids + _crb_ids + _epel_ids) | unique, _fallback_ids)) }}"
+  when: not _is_rhel
+
+- name: Ensure dnf-plugins-core is installed
+  ansible.builtin.package:
+    name: dnf-plugins-core
+    state: present
+  when: not _is_rhel
+
+- name: Disable ALL repos (Rocky/Alma/Stream 9)
+  ansible.builtin.command: dnf -y config-manager --disable \*
+  when: not _is_rhel
+  changed_when: true
+
+- name: Enable ONLY our local repos
+  ansible.builtin.command: >
+    dnf -y config-manager --enable {{ _allow_ids | join(' ') }}
+  when: not _is_rhel
+  changed_when: true
+
+- name: Clean & makecache (sanity)
+  ansible.builtin.shell: |
+    dnf clean all
+    dnf -y makecache
+  args: { executable: /bin/bash }
+  when: not _is_rhel
+
+- name: Show enabled repos (post-enforce)
+  ansible.builtin.command: dnf repolist --enabled
+  register: _enabled_repos_out
+  changed_when: false
+  when: not _is_rhel
+
+- ansible.builtin.debug:
+    var: _enabled_repos_out.stdout_lines
+  when: not _is_rhel
+

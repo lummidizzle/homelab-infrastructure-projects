@@ -33,3 +33,6 @@ Thumbs.db
 # Ignore inventory backups
 inventory_backup/
 
+
+# local temp backups
+*.bak*
