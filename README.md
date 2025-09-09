@@ -1,5 +1,5 @@
 ﻿<p align="center">
-  <img src="assets/olumide-banner-dark.svg" alt="Olumide — Linux Systems Engineer" width="100%">
+  <img src="assets/olumide-banner-animated.gif" alt="Olumide — Linux Systems Engineer" width="100%">
 </p>
 
 <p align="center">
