@@ -6,3 +6,4 @@ ansible/1/
 # misc
 .github/workflows/*.bak
 ansible/1/
+README.md.bak

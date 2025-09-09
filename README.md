@@ -1,13 +1,42 @@
-﻿# 🌐 Homelab Infrastructure Projects
+<p align="center">
+  <img src="assets/olumide-banner-dark.svg" alt="Olumide — Linux Systems Engineer" width="100%">
+</p>
 
-[![Monitoring Runbook](https://img.shields.io/badge/Monitoring-Runbook-blue)](monitoring/README.md) [![Overview](https://img.shields.io/badge/Overview-quick-lightgrey)](monitoring/overview.md)
-
-[![Monitoring Runbook](https://img.shields.io/badge/Monitoring-Runbook-blue)](monitoring/README.md) [![Overview](https://img.shields.io/badge/Overview-quick-lightgrey)](monitoring/overview.md)
-
-
-Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using real-world tools, enterprise practices, and hands-on automation.
+<p align="center">
+  <em>Automation-first • Security-focused • Hybrid IT Infrastructure</em>
+</p>
 
 ---
+
+# 🌐 Homelab Infrastructure Projects
+
+[![Monitoring Runbook](https://img.shields.io/badge/Monitoring-Runbook-blue)](monitoring/README.md)
+[![Overview](https://img.shields.io/badge/Overview-quick-lightgrey)](monitoring/overview.md)
+[![Docs](https://img.shields.io/badge/Documentation-GitHub%20Pages-brightgreen)](docs/index.md)
+[![Commits](https://img.shields.io/badge/Activity-Recent%20Commits-orange)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
+
+---
+﻿<p align="center">
+  <img src="assets/olumide-banner-dark.svg" alt="Olumide — Linux Systems Engineer" width="100%">
+</p>
+
+<p align="center">
+  <em>Automation-first • Security-focused • Hybrid IT Infrastructure</em>
+</p>
+
+---
+
+# 🌐 Homelab Infrastructure Projects
+
+[![Monitoring Runbook](https://img.shields.io/badge/Monitoring-Runbook-blue)](monitoring/README.md)
+[![Overview](https://img.shields.io/badge/Overview-quick-lightgrey)](monitoring/overview.md)
+[![Docs](https://img.shields.io/badge/Documentation-GitHub%20Pages-brightgreen)](docs/index.md)
+[![Commits](https://img.shields.io/badge/Activity-Recent%20Commits-orange)](https://github.com/lummidizzle/homelab-infrastructure-projects/commits/main)
+
+---
+
+Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using **enterprise practices, Linux engineering, and hands-on automation**.
+
 
 ## ⭐ Featured
 
