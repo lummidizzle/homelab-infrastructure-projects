@@ -1,0 +1,9 @@
+file,category,description,captured_at
+assets/screenshots/nagios-hosts-overview.png,Monitoring,Nagios host status grid,2025-09-15 13:11:06
+assets/screenshots/nagios-services-overview.png,Monitoring,Nagios services status grid,2025-09-15 13:11:06
+assets/screenshots/glpi-assets-computers.png,Asset Mgmt,GLPI → Assets → Computers list,2025-09-15 13:11:06
+assets/screenshots/glpi-users.png,Asset Mgmt,GLPI → Administration → Users,2025-09-15 13:11:06
+assets/screenshots/backup-index-backups.png,Backups,backup.corp.local /backups/ index,2025-09-15 13:11:06
+assets/screenshots/backup-root-index.png,Backups,backup.corp.local root index,2025-09-15 13:11:06
+assets/screenshots/repos-index.png,Repos,/repos index on reposync,2025-09-15 13:11:06
+assets/screenshots/local-repos-glpi-agent.png,Repos,/local-repos/glpi-agent mirror,2025-09-15 13:11:06
