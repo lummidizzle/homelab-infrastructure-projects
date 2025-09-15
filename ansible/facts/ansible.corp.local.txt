@@ -1,0 +1,58 @@
+ansible.corp.local | CHANGED | rc=0 >>
+ Static hostname: ansible.corp.local
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 0e3793c2dde84844b820404f5847e188
+         Boot ID: a49e42b4366648f7b93e3a741c3f4890
+    Product UUID: 4e634d56-b960-6932-ad9c-518e16ef9554
+    AF_VSOCK CID: 384800084
+  Virtualization: vmware
+Operating System: Red Hat Enterprise Linux 10.0 (Coughlan)
+     CPE OS Name: cpe:/o:redhat:enterprise_linux:10::baseos
+          Kernel: Linux 6.12.0-55.29.1.el10_0.x86_64
+    Architecture: x86-64
+ Hardware Vendor: VMware, Inc.
+  Hardware Model: VMware20,1
+ Hardware Serial: VMware-56 4d 63 4e 60 b9 32 69-ad 9c 51 8e 16 ef 95 54
+Firmware Version: VMW201.00V.24006586.B64.2406042154
+   Firmware Date: Tue 2024-06-04
+    Firmware Age: 1y 3month 1w 5d
+
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+ens160           UP             192.168.1.12/24 2600:1700:89e0:a50:20c:29ff:feef:9554/64 fe80::20c:29ff:feef:9554/64 
+
+Filesystem             Size  Used Avail Use% Mounted on
+/dev/mapper/rhel-root   17G  3.3G   14G  21% /
+devtmpfs               4.0M     0  4.0M   0% /dev
+tmpfs                  1.6G  140K  1.6G   1% /dev/shm
+efivarfs               256K   66K  186K  27% /sys/firmware/efi/efivars
+tmpfs                  620M  1.1M  619M   1% /run
+tmpfs                  1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+/dev/nvme0n1p2         960M  497M  464M  52% /boot
+/dev/nvme0n1p1         599M  8.4M  591M   2% /boot/efi
+tmpfs                  1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
+tmpfs                  310M  8.0K  310M   1% /run/user/1000
+
+               total        used        free      shared  buff/cache   available
+Mem:           3.0Gi       891Mi       132Mi       1.3Mi       2.3Gi       2.2Gi
+Swap:          2.0Gi       256Ki       2.0Gi
+
+Red Hat Enterprise Linux release 10.0 (Coughlan)
+
+public (default, active)
+  target: default
+  ingress-priority: 0
+  egress-priority: 0
+  icmp-block-inversion: no
+  interfaces: ens160
+  sources: 
+  services: ssh
+  ports: 22/tcp 80/tcp 443/tcp 2049/tcp 2049/udp 389/tcp 389/udp 636/tcp 137-139/tcp 137-139/udp 445/tcp 445/udp 25/tcp 465/tcp 53/tcp 53/udp 514/udp 5666/tcp 9418/tcp 8080/tcp
+  protocols: 
+  forward: yes
+  masquerade: no
+  forward-ports: 
+  source-ports: 
+  icmp-blocks: 
+  rich rules: 
+	rule family="ipv4" source address="192.168.1.15/32" port port="5666" protocol="tcp" accept
