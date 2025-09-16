@@ -1,8 +1,8 @@
 # 🌐 Homelab Infrastructure Projects
 
-[![Monitoring Runbook](https://img.shields.io/badge/Monitoring-Runbook-blue)](monitoring/README.md)
-[![Overview](https://img.shields.io/badge/Overview-quick-lightgrey)](monitoring/overview.md)
-![visitors](https://visitor-badge.laobi.icu/badge?page_id=lummidizzle.homelab-infrastructure-projects)
+[![\1](assets/screenshots/placeholders/coming-soon.svg)](monitoring/README.md)
+[![\1](assets/screenshots/placeholders/coming-soon.svg)](monitoring/overview.md)
+![\1](assets/screenshots/placeholders/coming-soon.svg)
 
 Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using real-world tools, enterprise practices, and hands-on automation.
 
