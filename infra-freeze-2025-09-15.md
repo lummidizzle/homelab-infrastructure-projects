@@ -5,23 +5,23 @@
 ## Newly Added Screenshots
 
 ### Nagios Detail
-![Nagios Host Detail - Ansible](assets/screenshots/nagios-host-detail-ansible.png)
-![Nagios Service Detail - NRPE Load](assets/screenshots/nagios-service-nrpe-load.png)
+![Nagios Host Detail - Ansible](assets/screenshots/placeholders/coming-soon.svg)
+![Nagios Service Detail - NRPE Load](assets/screenshots/placeholders/coming-soon.svg)
 
 ### GLPI Detail
-![GLPI Computer Detail - ansible](assets/screenshots/glpi-computer-ansible-detail.png)
-![GLPI Inventory Settings](assets/screenshots/glpi-inventory-settings.png)
+![GLPI Computer Detail - ansible](assets/screenshots/glpi/glpi-setup-language.png)
+![GLPI Inventory Settings](assets/screenshots/glpi/glpi-db-select.png)
 
 ### Ansible
-![Ansible Version](assets/screenshots/ansible-version.png)
-![Ansible Inventory Graph 1](assets/screenshots/ansible-inventory-graph-1.png)
-![Ansible Inventory Graph 2](assets/screenshots/ansible-inventory-graph-2.png)
-![Ansible Roles Tree](assets/screenshots/ansible-roles-tree.png)
-![Ansible Group Vars + Host Vars Tree](assets/screenshots/ansible-groupvars-hostvars-tree.png)
+![Ansible Version](assets/screenshots/placeholders/coming-soon.svg)
+![Ansible Inventory Graph 1](assets/screenshots/placeholders/coming-soon.svg)
+![Ansible Inventory Graph 2](assets/screenshots/placeholders/coming-soon.svg)
+![Ansible Roles Tree](assets/screenshots/placeholders/coming-soon.svg)
+![Ansible Group Vars + Host Vars Tree](assets/screenshots/placeholders/coming-soon.svg)
 
 ### Repos & Syslog
-![Reposync SELinux + curl check](assets/screenshots/reposync-selinux-curlcheck.png)
-![Syslog logs + rsyslog.d](assets/screenshots/syslog-logs-rsyslogd.png)
+![Reposync SELinux + curl check](assets/screenshots/placeholders/coming-soon.svg)
+![Syslog logs + rsyslog.d](assets/screenshots/placeholders/coming-soon.svg)
 
 
 
@@ -40,7 +40,7 @@ sudo ss -lunpt | grep 514   # UDP 514
 sudo ss -ltnp  | grep 514   # TCP 514
 ```
 
-![Syslog imudp/imtcp Checks](assets/screenshots/syslog-imudp-imtcp-checks.png)
+![Syslog imudp/imtcp Checks](assets/screenshots/placeholders/coming-soon.svg)
 
 ### 💾 Backup Server Checks
 ```bash
@@ -66,7 +66,7 @@ ansible all -i inventory -b -m shell -a '  echo "=== $(hostname) ===";   hostnam
 ⚠️ Note: A previous run errored with `list index out of range` due to inventory parsing.  
 Keep this screenshot as a record:
 
-![Ansible One-Liner Error](assets/screenshots/ansible-one-liner-error.png)
+![Ansible One-Liner Error](assets/screenshots/placeholders/coming-soon.svg)
 
 ---
 
@@ -129,3 +129,6 @@ ansible all -i inventory -b -m shell -a "/tmp/syscheck.sh" | tee syscheck-result
 > Each run can be timestamped and committed into Git for a full historical archive of host states.
 
 ---
+
+
+

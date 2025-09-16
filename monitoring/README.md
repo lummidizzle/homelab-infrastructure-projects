@@ -5,7 +5,7 @@
 
 ## 0) Outcome
 Everything is **green**: all 16 hosts UP, all services OK.  
-![Nagios Services](./assets/nagios-services.png)
+![Nagios Services](assets/screenshots/placeholders/coming-soon.svg)
 
 ---
 
@@ -197,8 +197,8 @@ gpgcheck=0
 ---
 
 ## 9) Evidence
-![Nagios Hosts](./assets/nagios-hosts.png)
-![Nagios Services](./assets/nagios-services.png)
+![Nagios Hosts](assets/screenshots/placeholders/coming-soon.svg)
+![Nagios Services](assets/screenshots/placeholders/coming-soon.svg)
 
 ---
 
@@ -206,3 +206,4 @@ gpgcheck=0
 - Add email/pager notifications (postfix relay via `staging.corp.local` at 192.168.1.18).
 - Author NRPE checks for: `/var/log` growth, critical daemons, and repo freshness.
 - Tie alerts into **AIDE** and **rsyslog** events for passive security monitoring.
+

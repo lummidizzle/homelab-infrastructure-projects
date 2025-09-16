@@ -1,7 +1,6 @@
 # ansible.posix
 <!-- Add CI and code coverage badges here. Samples included below. -->
-[![Build Status](
-https://dev.azure.com/ansible/ansible.posix/_apis/build/status/CI?branchName=main)](https://dev.azure.com/ansible/ansible.posix/_build?definitionId=26)
+[![Build Status](assets/screenshots/placeholders/coming-soon.svg)](https://dev.azure.com/ansible/ansible.posix/_build?definitionId=26)
 [![Run Status](https://api.shippable.com/projects/5e669aaf8b17a60007e4d18d/badge?branch=main)]() <!--[![Codecov](https://img.shields.io/codecov/c/github/ansible-collections/ansible.posix)](https://codecov.io/gh/ansible-collections/ansible.posix)-->
 
 ## Communication
@@ -112,3 +111,4 @@ The README has been carefully prepared to cover the [community template](https:/
 GNU General Public License v3.0 or later.
 
 See [COPYING](https://www.gnu.org/licenses/gpl-3.0.txt) to see the full text.
+

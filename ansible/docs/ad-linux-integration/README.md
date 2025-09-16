@@ -130,39 +130,39 @@ Common issues we fixed:
 ---
 
 ## 6) Proof (screenshots)
-![Git status on Ansible repo (files to commit)](images/01-git-status.png)
+![Git status on Ansible repo (files to commit)](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 1. Git status on Ansible repo (files to commit)</em></p>
 
-![Windows AD: create OU, linux-admins group, add user via PowerShell](images/02-ad-group-creation.png)
+![Windows AD: create OU, linux-admins group, add user via PowerShell](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 2. Windows AD: create OU, linux-admins group, add user via PowerShell</em></p>
 
-![realm list (several hosts) showing JOINED + KEYTAB_OK](images/03-realm-list-1.png)
+![realm list (several hosts) showing JOINED + KEYTAB_OK](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 3. realm list (several hosts) showing JOINED + KEYTAB_OK</em></p>
 
-![realm list continued (more hosts)](images/04-realm-list-2.png)
+![realm list continued (more hosts)](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 4. realm list continued (more hosts)</em></p>
 
-![realm list final batch](images/05-realm-list-3.png)
+![realm list final batch](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 5. realm list final batch</em></p>
 
-![Ansible verification summary (sudo/sssd info)](images/06-ansible-summary-1.png)
+![Ansible verification summary (sudo/sssd info)](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 6. Ansible verification summary (sudo/sssd info)</em></p>
 
-![Ansible verification summary (continued)](images/07-ansible-summary-2.png)
+![Ansible verification summary (continued)](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 7. Ansible verification summary (continued)</em></p>
 
-![Play recap: changes across all hosts](images/08-play-recap-1.png)
+![Play recap: changes across all hosts](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 8. Play recap: changes across all hosts</em></p>
 
-![Play recap after handler restart (sssd)](images/09-play-recap-2.png)
+![Play recap after handler restart (sssd)](assets/screenshots/placeholders/coming-soon.svg)
 
 <p align="center"><em>Figure 9. Play recap after handler restart (sssd)</em></p>
 
@@ -192,3 +192,4 @@ Then open a PR (or keep working on the branch).
 ---
 
 **Author’s note:** This README is distilled from our live runbook and terminal output over the last 3–5 days and is meant to be copy‑paste friendly.
+
