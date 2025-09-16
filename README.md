@@ -139,3 +139,13 @@ This repo is more than notes — it’s a **blueprint for running IT like an eng
 Built and maintained by **Olumide Familusi** — Linux Systems Engineer.  
 This repo reflects a hands-on journey toward **automation-first, secure, hybrid infrastructure design**.
 
+
+
+<!-- GLPI screenshots (recovered) -->
+### GLPI Detail
+
+![GLPI Setup - Language](assets/screenshots/glpi/glpi-setup-language.png)
+![GLPI DB Select](assets/screenshots/glpi/glpi-db-select.png)
+![GLPI Dashboard Warnings](assets/screenshots/glpi/glpi-dashboard-warnings.png)
+![GLPI User - post-only](assets/screenshots/glpi/glpi-user-post-only-form.png)
+
