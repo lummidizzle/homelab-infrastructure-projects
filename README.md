@@ -149,3 +149,13 @@ This repo reflects a hands-on journey toward **automation-first, secure, hybrid 
 ![GLPI Dashboard Warnings](assets/screenshots/glpi/glpi-dashboard-warnings.png)
 ![GLPI User - post-only](assets/screenshots/glpi/glpi-user-post-only-form.png)
 
+
+
+<!-- GLPI screenshots (recovered) -->
+### GLPI Detail
+
+![GLPI Setup - Language](assets/screenshots/glpi/glpi-setup-language.png)
+![GLPI DB Select](assets/screenshots/glpi/glpi-db-select.png)
+![GLPI Dashboard Warnings](assets/screenshots/glpi/glpi-dashboard-warnings.png)
+![GLPI User - post-only](assets/screenshots/glpi/glpi-user-post-only-form.png)
+
