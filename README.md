@@ -1,9 +1,5 @@
 # 🌐 Homelab Infrastructure Projects
 
-[![\1](assets/screenshots/placeholders/coming-soon.svg)](monitoring/README.md)
-[![\1](assets/screenshots/placeholders/coming-soon.svg)](monitoring/overview.md)
-![\1](assets/screenshots/placeholders/coming-soon.svg)
-
 Welcome to my **Hybrid IT Lab** — a fully-documented infrastructure playground where I design, build, and automate a production-style environment using real-world tools, enterprise practices, and hands-on automation.
 
 ---
